@@ -2,12 +2,23 @@ import numpy as np
 import time
 
 # --------------------------------------- CAPE ------------------------------------------------------
+
+
 class Automaton:
 
-    def __init__(self, shape, attributes, formats, parameters):
+    def __init__(self, shape, attributes, formats, parameters, initialisation):
+        self.attributes = attributes
         self.parameters = parameters
         self.grid = np.zeros(shape, dtype={'names':attributes, 'formats':formats})
         self.work_grid = np.zeros(self.grid.shape, dtype={'names': attributes, 'formats': formats})
+
+        # Grid initialisation
+        for attribute in initialisation.keys():
+            assert attribute in self.attributes, "Invalid initialisation: key[{0}] is not valid".format(attribute)
+            values = initialisation[attribute]
+            for address in values:
+                self.grid[address][attribute] = values[address]
+
 
 class Agent:
     def __init__(self):
@@ -17,11 +28,38 @@ class Agent:
 
 class TBAutomaton(Automaton):
 
-    def __init__(self, shape, parameters):
+    def __init__(self, shape, parameters, blood_vessel_addresses, initial_macrophage_addresses,
+                 initial_fast_bacteria_addresses, initial_slow_bacteria_addresses):
         attributes = ['oxygen', 'chemotherapy', 'chemokine', 'contents', 'oxygen_diffusion_rate',
                       'chemotherapy_diffusion_rate']
         formats = ['float', 'float', 'float', 'object', 'float', 'float']
-        Automaton.__init__(self, shape, attributes, formats, parameters)
+
+        # INITIALISE
+        initialisation = {}
+        initialisation['contents'] = {}
+        initialisation['oxygen'] = {}
+        initialisation['oxygen_diffusion_rate'] = {}
+        initialisation['chemotherapy_diffusion_rate'] = {}
+
+        # Blood vessels
+        self.blood_vessel_addresses = blood_vessel_addresses
+        for bva in blood_vessel_addresses:
+            vessel = BloodVessel()
+            initialisation['contents'][bva] = vessel
+        # Macrophages
+        for ima in initial_macrophage_addresses:
+            mac = Macrophage()
+            initialisation['contents'][ima] = mac
+        # Fast bacteria
+        for ifba in initial_fast_bacteria_addresses:
+            fbac = Bacterium('fast')
+            initialisation['contents'][ifba] = fbac
+        # Fast bacteria
+        for isba in initial_slow_bacteria_addresses:
+            sbac = Bacterium('slow')
+            initialisation['contents'][isba] = sbac
+
+        Automaton.__init__(self, shape, attributes, formats, parameters, initialisation)
 
     def diffusion(self, chemo):
         cell = self.grid[1:-1, 1:-1]
@@ -81,10 +119,12 @@ class TBAutomaton(Automaton):
                                     (isinstance(cell['contents'], Macrophage) and cell['contents'].state != 'resting') +
                                     self.parameters['chemokine_decay'] * cell['chemokine'])
 
+
 class Bacterium(Agent):
 
-    def __init__(self):
+    def __init__(self, state):
         Agent.__init__(self)
+        self.state = state
 
 
 class BloodVessel(Agent):
