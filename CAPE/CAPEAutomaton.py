@@ -54,7 +54,7 @@ class TBAutomaton(Automaton):
                                     (below['chemotherapy'] - cell['chemotherapy']) -
                                     ((cell['chemotherapy_diffusion_rate'] +above['chemotherapy_diffusion_rate']) / 2) *
                                     (cell['chemotherapy'] - above['chemotherapy'])) /
-                                   self.parameters['spatial_step'] ** 2) + \
+                                   self.parameters['spatial_step'] ** 2) +
                                   ((((cell['chemotherapy_diffusion_rate'] + right['chemotherapy_diffusion_rate']) / 2) *
                                     (right['chemotherapy'] - cell['chemotherapy']) -
                                     ((cell['chemotherapy_diffusion_rate'] + left['chemotherapy_diffusion_rate']) / 2) *
@@ -64,6 +64,22 @@ class TBAutomaton(Automaton):
                                    self.parameters['blood_vessel_excretion_rate']) +
                                   (self.parameters['chemotherapy_decay'] * cell['chemotherapy']))
 
+        self.work_grid['chemokine'][1:-1, 1:-1] = cell['chemokine'] + self.parameters['time_step'] * \
+                                    (((self.parameters['chemokine_diffusion'] *
+                                      (below['chemokine'] - cell['chemokine']) -
+                                      self.parameters['chemokine_diffusion'] *
+                                      (cell['chemokine'] - above['chemokine'])) /
+                                     self.parameters['spatial_step'] ** 2) +
+                                    ((self.parameters['chemokine_diffusion'] *
+                                      (right['chemokine'] - cell['chemokine']) -
+                                      self.parameters['chemokine_diffusion'] *
+                                      (cell['chemokine'] - left['chemokine'])) /
+                                     self.parameters['spatial_step'] ** 2) +
+                                    self.parameters['chemokine_from_bacteria'] *
+                                    isinstance(cell['contents'], Bacterium) +
+                                    self.parameters['chemokine_from_macrophage'] *
+                                    (isinstance(cell['contents'], Macrophage) and cell['contents'].state != 'resting') +
+                                    self.parameters['chemokine_decay'] * cell['chemokine'])
 
 class Bacterium(Agent):
 
@@ -72,6 +88,12 @@ class Bacterium(Agent):
 
 
 class BloodVessel(Agent):
+
+    def __init__(self):
+        Agent.__init__(self)
+
+
+class Macrophage(Agent):
 
     def __init__(self):
         Agent.__init__(self)
@@ -87,6 +109,10 @@ if __name__ == '__main__':
     parameters['oxygen_uptake_from_bacteria'] = 0.1
     parameters['chemotherapy_from_source'] = 0.1
     parameters['chemotherapy_decay'] = 0.1
+    parameters['chemokine_diffusion'] = 0.1
+    parameters['chemokine_from_bacteria'] = 0.1
+    parameters['chemokine_from_macrophage'] = 0.1
+    parameters['chemokine_decay'] = 0.1
 
     shape = (100,100)
     limit = 1000
