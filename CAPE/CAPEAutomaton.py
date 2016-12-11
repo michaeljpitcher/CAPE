@@ -81,7 +81,7 @@ class TBAutomaton(Automaton):
                                         (cell['oxygen'] - left['oxygen']))
                                         / self.parameters['spatial_step']**2) +
                                         (self.parameters['oxygen_from_source'] * isinstance(cell, BloodVessel) *
-                                         self.parameters['blood_vessel_excretion_rate']) +
+                                         self.parameters['blood_vessel_value']) +
                                         (self.parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
                                          isinstance(cell['contents'], Bacterium)))
 
@@ -99,7 +99,7 @@ class TBAutomaton(Automaton):
                                     (cell['chemotherapy'] -left['chemotherapy'])) /
                                    self.parameters['spatial_step'] ** 2) +
                                   (self.parameters['chemotherapy_from_source'] * isinstance(cell, BloodVessel) *
-                                   self.parameters['blood_vessel_excretion_rate']) +
+                                   self.parameters['blood_vessel_value']) +
                                   (self.parameters['chemotherapy_decay'] * cell['chemotherapy']))
 
         self.work_grid['chemokine'][1:-1, 1:-1] = cell['chemokine'] + self.parameters['time_step'] * \
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parameters['spatial_step'] = 0.1
     parameters['time_step'] = 0.001
     parameters['oxygen_from_source'] = 0.1
-    parameters['blood_vessel_excretion_rate'] = 0.1
+    parameters['blood_vessel_value'] = 0.1
     parameters['oxygen_uptake_from_bacteria'] = 0.1
     parameters['chemotherapy_from_source'] = 0.1
     parameters['chemotherapy_decay'] = 0.1
