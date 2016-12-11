@@ -1,5 +1,5 @@
 import unittest
-from CAPE.CAPEAutomaton import Automaton
+from CAPE.CAPEAutomaton import *
 
 
 class AutomatonTestCase(unittest.TestCase):
@@ -24,6 +24,7 @@ class AutomatonTestCase(unittest.TestCase):
         self.initialise['c'] = {}
         self.initialise['c'][(3, 3)] = dict()
         self.initialise['c'][(3, 3)]['test'] = 99
+        self.initialise['c'][(4, 4)] = Agent()
         self.automaton = Automaton(self.shape, self.attributes, self.formats, self.time_params, self.model_params,
                                    self.initialise)
 
@@ -53,8 +54,8 @@ class AutomatonTestCase(unittest.TestCase):
                 if (x == 3 and y == 3):
                     self.assertItemsEqual(self.automaton.grid[(x,y)]['c'].keys(), ['test'])
                     self.assertEqual(self.automaton.grid[(x, y)]['c']['test'], 99)
-                else:
-                    self.assertEqual(self.automaton.grid[(x, y)]['c'], 0.0)
+                elif (x == 4 and y == 4):
+                    self.assertTrue(isinstance(self.automaton.grid[(x, y)]['c'], Agent))
 
     def test_run_not_overriden(self):
         with self.assertRaises(NotImplementedError) as context:

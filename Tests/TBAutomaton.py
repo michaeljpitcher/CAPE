@@ -37,17 +37,21 @@ class TBAutomatonTestCase(unittest.TestCase):
                     self.assertEqual(self.automaton.grid[(x,y)]['contents'], 0.0)
                 elif (x,y) in self.bv:
                     self.assertTrue(isinstance(self.automaton.grid[(x, y)]['contents'], BloodVessel))
+                    self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.agents)
                 elif (x, y) in self.macs:
                     self.assertTrue(isinstance(self.automaton.grid[(x, y)]['contents'], Macrophage))
+                    self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.agents)
                 elif (x,y) in self.fb:
                     self.assertTrue(isinstance(self.automaton.grid[(x,y)]['contents'], Bacterium))
                     self.assertEqual(self.automaton.grid[(x,y)]['contents'].metabolism, 'fast')
+                    self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.agents)
                 elif (x,y) in self.sb:
                     self.assertTrue(isinstance(self.automaton.grid[(x,y)]['contents'], Bacterium))
                     self.assertEqual(self.automaton.grid[(x,y)]['contents'].metabolism, 'slow')
+                    self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.agents)
 
         self.assertEqual(self.automaton.chemo_schedule1_start, 1.0)
-
+        self.assertEqual(len(self.automaton.agents), len(self.bv) + len(self.macs) + len(self.fb) + len(self.sb))
 
 
 if __name__ == '__main__':
