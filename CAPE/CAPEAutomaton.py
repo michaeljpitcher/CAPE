@@ -67,8 +67,6 @@ class TBAutomaton(Automaton):
         initialisation = {}
         initialisation['contents'] = {}
         initialisation['oxygen'] = {}
-        initialisation['oxygen_diffusion_rate'] = {}
-        initialisation['chemotherapy_diffusion_rate'] = {}
 
         # Blood vessels
         self.blood_vessel_addresses = blood_vessel_addresses
@@ -167,9 +165,9 @@ class TBAutomaton(Automaton):
 
 class Bacterium(Agent):
 
-    def __init__(self, state):
+    def __init__(self, metabolism):
         Agent.__init__(self)
-        self.state = state
+        self.metabolism = metabolism
 
 
 class BloodVessel(Agent):
