@@ -125,11 +125,16 @@ if __name__ == '__main__':
         else:
             parameters[i] = config.getfloat("ParametersSection", i)
 
+    # TIME PARAMETERS
+    time_parameters = {}
+    # Get all options in time parameters section
+    for i in config.options("TimeParametersSection"):
+        time_parameters[i] = config.getfloat("TimeParametersSection", i)
+
     # LOAD GRID ATTRIBUTES
     total_shape = [int(a) for a in config.get("GridSection", "total_shape").split(",")]
 
     # LOAD RUN PARAMETERS
-    time_limit = int(config.getint("RunParametersSection", "time_limit") / parameters['time_step'])
     output_location = config.get("RunParametersSection", "output_location")
     if not os.path.exists(output_location):
         os.makedirs(output_location)
@@ -138,8 +143,9 @@ if __name__ == '__main__':
     # LOAD INITIALISATION
     blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise(config, total_shape)
 
-    automaton = CAPEAutomaton.TBAutomaton(total_shape,parameters,blood_vessels,macrophages,fast_bacteria,slow_bacteria)
-    
+    automaton = CAPEAutomaton.TBAutomaton(total_shape, time_parameters, parameters, blood_vessels, macrophages,
+                                          fast_bacteria, slow_bacteria)
+
     whole_end_time = time.time()
     print "End:     {", whole_end_time, "}"
     print "Duration: ", whole_end_time-whole_start_time
