@@ -65,6 +65,12 @@ class TBAutomaton(Automaton):
                       'chemotherapy_diffusion_rate']
         formats = ['float', 'float', 'float', 'object', 'float', 'float']
 
+        self.blood_vessel_addresses = blood_vessel_addresses
+        self.macrophages = []
+        self.bacteria = []
+        self.tcells = []
+        self.caseum_addresses = []
+
         # INITIALISE
         initialisation = {}
         initialisation['contents'] = {}
@@ -75,18 +81,22 @@ class TBAutomaton(Automaton):
         for bva in blood_vessel_addresses:
             vessel = BloodVessel()
             initialisation['contents'][bva] = vessel
+            self.blood_vessel_addresses.append(bva)
         # Macrophages
         for ima in initial_macrophage_addresses:
             mac = Macrophage('resting')
             initialisation['contents'][ima] = mac
+            self.macrophages.append(mac)
         # Fast bacteria
         for ifba in initial_fast_bacteria_addresses:
             fbac = Bacterium('fast')
             initialisation['contents'][ifba] = fbac
+            self.bacteria.append(fbac)
         # Fast bacteria
         for isba in initial_slow_bacteria_addresses:
             sbac = Bacterium('slow')
             initialisation['contents'][isba] = sbac
+            self.bacteria.append(sbac)
 
         Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, initialisation)
 
@@ -173,6 +183,12 @@ class Bacterium(Agent):
 
 
 class BloodVessel(Agent):
+
+    def __init__(self):
+        Agent.__init__(self)
+
+
+class Caseum(Agent):
 
     def __init__(self):
         Agent.__init__(self)
