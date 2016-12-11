@@ -81,7 +81,6 @@ class TBAutomaton(Automaton):
         for bva in blood_vessel_addresses:
             vessel = BloodVessel()
             initialisation['contents'][bva] = vessel
-            self.blood_vessel_addresses.append(bva)
         # Macrophages
         for ima in initial_macrophage_addresses:
             mac = Macrophage('resting')
