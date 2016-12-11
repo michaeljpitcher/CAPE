@@ -27,6 +27,8 @@ class Automaton:
             values = initialisation[attribute]
             for address in values:
                 self.grid[address][attribute] = values[address]
+                if isinstance(values[address], Agent):
+                    self.agents.append(values[address])
 
     def run(self):
 
