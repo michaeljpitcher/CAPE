@@ -1,5 +1,6 @@
 import numpy as np
 import time
+from collections import Counter
 
 # --------------------------------------- CAPE ------------------------------------------------------
 
@@ -44,6 +45,19 @@ class Automaton:
     def update_agents(self):
         raise NotImplementedError
 
+    def moore_neighbours(self, address, depth):
+        x,y = address
+        neighbours = self.grid[x - depth:x + depth + 1, y - depth:y + depth + 1].flatten()
+        neighbours = np.hstack((neighbours[:len(neighbours) // 2], neighbours[len(neighbours) // 2 + 1:]))
+        return neighbours
+
+    def von_neumann_neighbours(self, address, depth):
+        x, y = address
+        neighbours = None
+        # TODO
+        return neighbours
+
+
 class Agent:
     def __init__(self):
         self.age = 0.0
@@ -79,7 +93,7 @@ class TBAutomaton(Automaton):
         # Blood vessels
         self.blood_vessel_addresses = blood_vessel_addresses
         for bva in blood_vessel_addresses:
-            vessel = BloodVessel()
+            vessel = BloodVessel(model_parameters['blood_vessel_value'])
             initialisation['contents'][bva] = vessel
         # Macrophages
         for ima in initial_macrophage_addresses:
@@ -110,7 +124,23 @@ class TBAutomaton(Automaton):
         self.diffusion(chemo)
 
     def diffusion_pre_process(self):
-        pass
+        affected_addresses = []
+
+        for caseum_address in self.caseum_addresses:
+            neighbours = self.moore_neighbours(caseum_address,
+                                               self.model_parameters['caseum_distance_to_reduce_diffusion'])
+            affected_addresses += neighbours
+
+        # Affected addresses is now a list of all address within the range of cells with caseum
+        counted = Counter(affected_addresses)
+        for address in counted:
+            if counted[address] >= self.model_parameters['caseum_threshold_to_reduce_diffusion']:
+                self.grid[address]['oxygen_diffusion_rate'] = self.model_parameters['oxygen_diffusion'] / \
+                                                              self.model_parameters['diffusion_caseum_reduction']
+                self.grid[address]['chemotherapy_diffusion_rate'] = self.model_parameters['chemotherapy_diffusion'] / \
+                                                        self.model_parameters['diffusion_caseum_reduction']
+                if isinstance(self.grid[address]['contents'], BloodVessel):
+                    self.grid[address]['contents'].diffusion_rate /= self.model_parameters['diffusion_caseum_reduction']
 
     def diffusion(self, chemo):
         cell = self.grid[1:-1, 1:-1]
@@ -132,7 +162,7 @@ class TBAutomaton(Automaton):
                                         (cell['oxygen'] - left['oxygen']))
                                                                  / self.model_parameters['spatial_step'] ** 2) +
                                                                 (self.model_parameters['oxygen_from_source'] * isinstance(cell, BloodVessel) *
-                                                                 self.model_parameters['blood_vessel_value']) +
+                                                                 cell['contents'].diffusion_rate) +
                                                                 (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
                                                                  isinstance(cell['contents'], Bacterium)))
 
@@ -150,7 +180,7 @@ class TBAutomaton(Automaton):
                                     (cell['chemotherapy'] -left['chemotherapy'])) /
                                                                                   self.model_parameters['spatial_step'] ** 2) +
                                                                                  (self.model_parameters['chemotherapy_from_source'] * isinstance(cell, BloodVessel) *
-                                                                                  self.model_parameters['blood_vessel_value']) +
+                                                                                  cell['contents'].diffusion_rate) +
                                                                                  (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy']))
 
         self.work_grid['chemokine'][1:-1, 1:-1] = cell['chemokine'] + self.model_parameters['time_step'] * \
@@ -183,8 +213,9 @@ class Bacterium(Agent):
 
 class BloodVessel(Agent):
 
-    def __init__(self):
+    def __init__(self, diffusion_rate):
         Agent.__init__(self)
+        self.diffusion_rate = diffusion_rate
 
 
 class Caseum(Agent):
@@ -229,8 +260,3 @@ if __name__ == '__main__':
     limit = 1000
     start_time = time.time()
     tba = TBAutomaton((100, 100), time_params, model_params, [], [], [], [])
-    for t in range(limit):
-        print t * 0.001
-        tba.diffusion(True)
-    end_time = time.time()
-    print "DURATION:", end_time - start_time
