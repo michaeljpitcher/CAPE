@@ -1,4 +1,4 @@
-import CAPEAutomaton
+import TBAutomaton
 import time
 import ConfigParser
 import os
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     # LOAD INITIALISATION
     blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise(config, total_shape)
 
-    automaton = CAPEAutomaton.TBAutomaton(total_shape, time_parameters, parameters, blood_vessels, macrophages,
+    automaton = TBAutomaton.TBAutomaton(total_shape, time_parameters, parameters, blood_vessels, macrophages,
                                           fast_bacteria, slow_bacteria)
 
     whole_end_time = time.time()
