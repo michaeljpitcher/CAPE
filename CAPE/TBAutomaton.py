@@ -60,6 +60,9 @@ class TBAutomaton(Automaton):
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
                                                        self.model_parameters['chemotherapy_schedule1_start_upper'])
 
+    def timestep_output(self):
+        print "t = ", self.time * self.time_step, "Bac = ", len(self.bacteria)
+
     def update_cells(self):
         self.diffusion_pre_process()
         chemo = (self.chemo_schedule1_start / self.time_step) <= self.time < \
@@ -479,7 +482,7 @@ if __name__ == '__main__':
 
     time_params={}
     time_params['initial_time'] = 0.0
-    time_params['time_step'] = 1.0
+    time_params['time_step'] = 0.001
     time_params['time_limit'] = 100.0
 
     model_params = {}
