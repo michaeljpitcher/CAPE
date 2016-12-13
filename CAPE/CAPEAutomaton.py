@@ -76,7 +76,7 @@ class Automaton:
             self.time += 1
 
     def timestep_output(self):
-        print "t = ", self.time
+        print "t = ", self.time * self.time_step
 
     def update_cells(self):
         raise NotImplementedError
