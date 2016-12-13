@@ -12,6 +12,11 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params = {}
         self.model_params['chemotherapy_schedule1_start_lower'] = 1.0
         self.model_params['chemotherapy_schedule1_start_upper'] = 2.0
+        self.model_params['blood_vessel_value'] = 1.0
+        self.model_params['initial_oxygen'] = 1.0
+        self.model_params['oxygen_diffusion'] = 1.0
+        self.model_params['chemotherapy_diffusion'] = 1.0
+
         self.bv = [(1, 1), (2, 2), (3, 3)]
         self.macs = [(9, 9), (8, 8), (7, 7)]
         self.fb = [(8, 1), (8, 2), (8, 3)]
@@ -21,7 +26,7 @@ class TBAutomatonTestCase(unittest.TestCase):
 
     def test_initialise(self):
         atts = ['oxygen', 'chemotherapy', 'chemokine', 'contents', 'oxygen_diffusion_rate',
-                      'chemotherapy_diffusion_rate']
+                      'chemotherapy_diffusion_rate', 'blood_vessel']
         self.assertItemsEqual(atts, self.automaton.attributes)
         self.assertItemsEqual(self.model_params, self.automaton.model_parameters)
         self.assertEqual(self.automaton.time, self.time_params['initial_time'])
@@ -36,8 +41,8 @@ class TBAutomatonTestCase(unittest.TestCase):
                 if (x,y) not in self.bv and (x,y) not in self.macs and (x,y) not in self.fb and (x,y) not in self.sb:
                     self.assertEqual(self.automaton.grid[(x,y)]['contents'], 0.0)
                 elif (x,y) in self.bv:
-                    self.assertTrue(isinstance(self.automaton.grid[(x, y)]['contents'], BloodVessel))
-                    self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.agents)
+                    self.assertEqual(self.automaton.grid[(x, y)]['contents'], 1.5)
+                    self.assertEqual(self.automaton.grid[(x, y)]['blood_vessel'], self.model_params['blood_vessel_value'])
                 elif (x, y) in self.macs:
                     self.assertTrue(isinstance(self.automaton.grid[(x, y)]['contents'], Macrophage))
                     self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.agents)
@@ -54,7 +59,7 @@ class TBAutomatonTestCase(unittest.TestCase):
                     self.assertTrue(self.automaton.grid[(x, y)]['contents'] in self.automaton.bacteria)
 
         self.assertEqual(self.automaton.chemo_schedule1_start, 1.0)
-        self.assertEqual(len(self.automaton.agents), len(self.bv) + len(self.macs) + len(self.fb) + len(self.sb))
+        self.assertEqual(len(self.automaton.agents), len(self.macs) + len(self.fb) + len(self.sb))
         self.assertItemsEqual(self.automaton.blood_vessel_addresses, self.bv)
         self.assertEqual(len(self.automaton.tcells), 0.0)
         self.assertEqual(len(self.automaton.caseum_addresses), 0.0)
