@@ -29,8 +29,8 @@ class TBAutomaton(Automaton):
         # Blood vessels & oxygen
         self.blood_vessel_addresses = blood_vessel_addresses
         for bva in blood_vessel_addresses:
-            # Not strictly necessary,but amend the contents to show the cell is not empty
-            initialisation['contents'][bva] = 1.5
+            # Not strictly necessary, but amend the contents to show the cell is not empty
+            initialisation['contents'][bva] = model_parameters['blood_vessel_value']
             initialisation['blood_vessel'][bva] = model_parameters['blood_vessel_value']
             initialisation['oxygen'][bva] = model_parameters['blood_vessel_value'] * model_parameters['initial_oxygen']
         # Macrophages
