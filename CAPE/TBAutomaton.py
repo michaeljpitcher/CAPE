@@ -71,9 +71,9 @@ class TBAutomaton(Automaton):
         affected_addresses = []
 
         for caseum_address in self.caseum_addresses:
-            neighbours = self.moore_neighbours(caseum_address,
-                                               self.model_parameters['caseum_distance_to_reduce_diffusion'])
-            affected_addresses += neighbours
+            for d in range(self.model_parameters['caseum_distance_to_reduce_diffusion']):
+                neighbours = self.moore_neighbours(caseum_address,d)
+                affected_addresses += neighbours
 
         # Affected addresses is now a list of all address within the range of cells with caseum
         counted = Counter(affected_addresses)
