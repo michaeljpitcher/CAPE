@@ -5,7 +5,7 @@ from CAPEAutomaton import *
 
 class TBAutomaton(Automaton):
 
-    def __init__(self, shape, time_parameters, model_parameters,
+    def __init__(self, shape, time_parameters, model_parameters, output_location,
                  blood_vessel_addresses, initial_macrophage_addresses,
                  initial_fast_bacteria_addresses, initial_slow_bacteria_addresses):
         attributes = ['oxygen', 'chemotherapy', 'chemokine', 'contents', 'oxygen_diffusion_rate',
@@ -55,7 +55,8 @@ class TBAutomaton(Automaton):
                 initialisation['oxygen_diffusion_rate'][(x,y)] = model_parameters['oxygen_diffusion']
                 initialisation['chemotherapy_diffusion_rate'][(x, y)] = model_parameters['chemotherapy_diffusion']
 
-        Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, initialisation)
+        Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
+                           initialisation)
 
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
                                                        self.model_parameters['chemotherapy_schedule1_start_upper'])
@@ -448,19 +449,32 @@ class Bacterium(Agent):
     def __init__(self, metabolism):
         Agent.__init__(self)
         self.metabolism = metabolism
+        self.resting = False
 
-
-class BloodVessel(Agent):
-
-    def __init__(self, diffusion_rate):
-        Agent.__init__(self)
-        self.diffusion_rate = diffusion_rate
-
+    def output_code(self):
+        # 1.0 == Fast, 2.0 == slow
+        code = 1.0 + (self.metabolism == 'slow')
+        # Add .5 if resting
+        if self.resting:
+            code += 0.5
+        return code
 
 class Caseum(Agent):
 
     def __init__(self):
         Agent.__init__(self)
+
+    def output_code(self):
+        return 100.0
+
+
+class TCell(Agent):
+
+    def __init__(self):
+        Agent.__init__(self)
+
+    def output_code(self):
+        return 3.0
 
 
 class Macrophage(Agent):
@@ -470,12 +484,15 @@ class Macrophage(Agent):
         self.state = state
         self.intracellular_bacteria = 0
 
-
-class TCell(Agent):
-
-    def __init__(self):
-        Agent.__init__(self)
-
+    def output_code(self):
+        code = 4.0
+        if self.state == 'active':
+            code += 1.0
+        elif self.state == 'infected':
+            code += 2.0
+        elif self.state == 'chronically_infected':
+            code += 3.0
+        return code
 
 
 if __name__ == '__main__':
@@ -504,5 +521,5 @@ if __name__ == '__main__':
     model_params['chemotherapy_schedule2_start'] = 2.0
 
     start_time = time.time()
-    tba = TBAutomaton((100, 100), time_params, model_params, [], [], [], [])
+    tba = TBAutomaton((100, 100), time_params, model_params, "output", [], [], [], [])
     tba.run()
