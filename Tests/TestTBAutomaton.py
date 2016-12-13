@@ -1,5 +1,5 @@
 import unittest
-from CAPE.CAPEAutomaton import *
+from CAPE.TBAutomaton import *
 
 
 class TBAutomatonTestCase(unittest.TestCase):
@@ -58,6 +58,9 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertItemsEqual(self.automaton.blood_vessel_addresses, self.bv)
         self.assertEqual(len(self.automaton.tcells), 0.0)
         self.assertEqual(len(self.automaton.caseum_addresses), 0.0)
+
+    def test_diffusion_pre_process(self):
+        pass
 
 
 if __name__ == '__main__':
