@@ -3,17 +3,24 @@ import time
 from collections import Counter
 import itertools
 import math
+import csv
 
 # --------------------------------------- CAPE ------------------------------------------------------
 
 
 class Automaton:
 
-    def __init__(self, shape, attributes, formats, time_parameters, model_parameters, initialisation):
+    def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location, initialisation):
         self.attributes = attributes
         self.model_parameters = model_parameters
         self.dimensions = 2
         self.max_depth = 3
+
+        # Output files
+        if output_location != '':
+            output_location += '/'
+        self.output_location = output_location
+        self.grid_file = open(output_location + 'grid.csv', 'w')
 
         assert ('initial_time' in time_parameters.keys()), "Time parameter 'initial_time' must be defined"
         self.time = time_parameters['initial_time']
@@ -65,7 +72,6 @@ class Automaton:
                         break
             self.moore_relative[depth] = reduced_row_moore
 
-
     def run(self):
 
         while self.time < self.time_limit:
@@ -110,9 +116,25 @@ class Automaton:
     def von_neumann_neighbours(self, address, depth):
         return self.neighbours(address, depth, 'von_neumann')
 
+    def record_grid(self):
+        writer = csv.writer(self.grid_file, delimiter=',')
+        for i in range(self.grid.shape[0]):
+            row = []
+            for j in range(self.grid.shape[1]):
+                contents = self.grid[(i,j)]['contents']
+                if isinstance(contents, Agent):
+                    row.append(contents.output_code())
+                else:
+                    row.append(0.0)
+            writer.writerow(row)
+
+
 class Agent:
     def __init__(self):
         self.age = 0.0
+
+    def output_code(self):
+        raise NotImplementedError
 
 
 class Event:
