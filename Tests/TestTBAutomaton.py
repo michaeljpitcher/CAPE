@@ -41,7 +41,7 @@ class TBAutomatonTestCase(unittest.TestCase):
                 if (x,y) not in self.bv and (x,y) not in self.macs and (x,y) not in self.fb and (x,y) not in self.sb:
                     self.assertEqual(self.automaton.grid[(x,y)]['contents'], 0.0)
                 elif (x,y) in self.bv:
-                    self.assertEqual(self.automaton.grid[(x, y)]['contents'], 1.5)
+                    self.assertEqual(self.automaton.grid[(x, y)]['contents'], self.model_params['blood_vessel_value'])
                     self.assertEqual(self.automaton.grid[(x, y)]['blood_vessel'], self.model_params['blood_vessel_value'])
                 elif (x, y) in self.macs:
                     self.assertTrue(isinstance(self.automaton.grid[(x, y)]['contents'], Macrophage))
@@ -64,8 +64,52 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertEqual(len(self.automaton.tcells), 0.0)
         self.assertEqual(len(self.automaton.caseum_addresses), 0.0)
 
-    def test_diffusion_pre_process(self):
-        pass
+    def test_diffusion_pre_process_no_caseum(self):
+        self.automaton.diffusion_pre_process()
+        for x in range(10):
+            for y in range(10):
+                cell = self.automaton.grid[(x,y)]
+                self.assertEqual(cell['oxygen_diffusion_rate'], self.model_params['oxygen_diffusion'])
+                self.assertEqual(cell['chemotherapy_diffusion_rate'], self.model_params['chemotherapy_diffusion'])
+
+    def test_diffusion_pre_process_caseum_no_reduction(self):
+        self.automaton.model_parameters['caseum_distance_to_reduce_diffusion'] = 1
+        self.automaton.model_parameters['caseum_threshold_to_reduce_diffusion'] = 2
+
+        cas = Caseum()
+        self.automaton.grid[(4,1)]['contents'] = cas
+        self.automaton.caseum_addresses.append((4,1))
+
+        self.automaton.diffusion_pre_process()
+        for x in range(10):
+            for y in range(10):
+                cell = self.automaton.grid[(x,y)]
+                self.assertEqual(cell['oxygen_diffusion_rate'], self.model_params['oxygen_diffusion'])
+                self.assertEqual(cell['chemotherapy_diffusion_rate'], self.model_params['chemotherapy_diffusion'])
+
+    def test_diffusion_pre_process_caseum_reduction(self):
+        self.automaton.model_parameters['caseum_distance_to_reduce_diffusion'] = 1
+        self.automaton.model_parameters['caseum_threshold_to_reduce_diffusion'] = 1
+
+        self.automaton.model_parameters['diffusion_caseum_reduction'] = 2.0
+
+        cas = Caseum()
+        self.automaton.grid[(4,1)]['contents'] = cas
+        self.automaton.caseum_addresses.append((4,1))
+
+        expected_reductions = [(3,0),(3,1),(3,2),(4,0),(4,2),(5,0),(5,1),(5,2)]
+
+        self.automaton.diffusion_pre_process()
+        for x in range(10):
+            for y in range(10):
+                cell = self.automaton.grid[(x,y)]
+                if (x,y) in expected_reductions:
+                    self.assertEqual(cell['oxygen_diffusion_rate'], self.model_params['oxygen_diffusion'] / self.automaton.model_parameters['diffusion_caseum_reduction'])
+                    self.assertEqual(cell['chemotherapy_diffusion_rate'], self.model_params['chemotherapy_diffusion'] / self.automaton.model_parameters['diffusion_caseum_reduction'])
+                else:
+                    self.assertEqual(cell['oxygen_diffusion_rate'], self.model_params['oxygen_diffusion'])
+                    self.assertEqual(cell['chemotherapy_diffusion_rate'], self.model_params['chemotherapy_diffusion'])
+
 
 
 if __name__ == '__main__':
