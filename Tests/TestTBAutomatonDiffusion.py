@@ -84,8 +84,6 @@ class DiffusionTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(4, 5)]['oxygen'], expected_oxygen_at_cell)
         self.assertEqual(self.automaton.work_grid[(5, 4)]['oxygen'], expected_oxygen_at_cell)
 
-
-
     def test_oxygen_from_source_no_diffusion(self):
         previous_oxygen_at_cell = self.model_params['initial_oxygen'] * self.model_params['blood_vessel_value']
         # Set from source
@@ -100,6 +98,10 @@ class DiffusionTestCase(unittest.TestCase):
             self.automaton.model_parameters['blood_vessel_value']
             + 0)
         self.assertEqual(self.automaton.work_grid[(4,4)]['oxygen'], expected_oxygen_at_cell)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['oxygen'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['oxygen'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['oxygen'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['oxygen'], 0.0)
 
     def test_oxygen_to_bacteria_no_diffusion(self):
         previous_oxygen_at_cell = self.model_params['initial_oxygen'] * self.model_params['blood_vessel_value']
@@ -116,6 +118,56 @@ class DiffusionTestCase(unittest.TestCase):
             - self.automaton.model_parameters['oxygen_uptake_from_bacteria'] * previous_oxygen_at_cell
             + 0)
         self.assertEqual(self.automaton.work_grid[(4,4)]['oxygen'], expected_oxygen_at_cell)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['oxygen'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['oxygen'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['oxygen'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['oxygen'], 0.0)
+
+    def test_oxygen_diffusion_differing_rates(self):
+
+        self.automaton.grid['oxygen_diffusion_rate'][(4, 4)] = 1.0
+        self.automaton.grid['oxygen_diffusion_rate'][(3, 4)] = 0.7
+        self.automaton.grid['oxygen_diffusion_rate'][(4, 3)] = 0.6
+        self.automaton.grid['oxygen_diffusion_rate'][(4, 5)] = 0.5
+        self.automaton.grid['oxygen_diffusion_rate'][(5, 4)] = 0.4
+
+        self.automaton.diffusion(False)
+        previous_oxygen_at_source_cell = self.model_params['initial_oxygen'] * self.model_params['blood_vessel_value']
+        expected_oxygen_at_cell = (previous_oxygen_at_source_cell) + self.time_params['time_step'] * (
+            (((self.automaton.grid['oxygen_diffusion_rate'][(4, 4)] + self.automaton.grid['oxygen_diffusion_rate'][(3, 4)]) / 2) *
+             (0 - previous_oxygen_at_source_cell) -
+            ((self.automaton.grid['oxygen_diffusion_rate'][(4, 4)] + self.automaton.grid['oxygen_diffusion_rate'][(5, 4)]) / 2) *
+             (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step']**2
+            + (((self.automaton.grid['oxygen_diffusion_rate'][(4, 4)] + self.automaton.grid['oxygen_diffusion_rate'][(4, 3)]) / 2) *
+               (0 - previous_oxygen_at_source_cell) -
+            ((self.automaton.grid['oxygen_diffusion_rate'][(4, 4)] + self.automaton.grid['oxygen_diffusion_rate'][(4, 5)]) / 2) *
+               (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step']**2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4,4)]['oxygen'], expected_oxygen_at_cell)
+        # Neighbours - check the neighbours get the oxygen
+        expected_oxygen_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['oxygen_diffusion_rate'][(3, 4)] + self.automaton.grid['oxygen_diffusion_rate'][(4, 4)]) / 2) *
+             (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['oxygen'], expected_oxygen_at_cell)
+        expected_oxygen_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['oxygen_diffusion_rate'][(5, 4)] + self.automaton.grid['oxygen_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['oxygen'], expected_oxygen_at_cell)
+        expected_oxygen_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['oxygen_diffusion_rate'][(4, 3)] + self.automaton.grid['oxygen_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['oxygen'], expected_oxygen_at_cell)
+        expected_oxygen_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['oxygen_diffusion_rate'][(4, 5)] + self.automaton.grid['oxygen_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['oxygen'], expected_oxygen_at_cell)
 
 
 if __name__ == '__main__':
