@@ -16,7 +16,7 @@ class Automaton:
         self.model_parameters = model_parameters
         self.time_parameters = time_parameters
         self.dimensions = 2
-        self.max_depth = 3
+        self.max_depth = int(self.model_parameters['max_depth'])
 
         # Output files
         if output_location != '':
