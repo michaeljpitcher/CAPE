@@ -1,6 +1,4 @@
 import numpy as np
-import time
-from collections import Counter
 import itertools
 import math
 import csv

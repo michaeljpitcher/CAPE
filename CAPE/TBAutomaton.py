@@ -1,4 +1,5 @@
 from CAPEAutomaton import *
+from collections import Counter
 # ---------------------------------------- TB -------------------------------------------------------
 
 
@@ -629,14 +630,15 @@ def initialise(config, total_shape):
 
 if __name__ == '__main__':
 
+    import ConfigParser
+    import os
+    import time
+
     print '------------------------'
     print 'TB Simulation Automaton'
     print '------------------------'
     whole_start_time = time.time()
     print "Begin:   {", whole_start_time, "}"
-
-    import ConfigParser
-    import os
 
     config = ConfigParser.RawConfigParser()
     if not config.read('config.properties'):
