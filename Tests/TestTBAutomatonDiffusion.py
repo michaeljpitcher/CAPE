@@ -244,6 +244,60 @@ class DiffusionTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], 0.0)
         self.assertEqual(self.automaton.work_grid[(5, 4)]['chemotherapy'], 0.0)
 
+    def test_chemotherapy_diffusion_differing_rates(self):
+
+        self.automaton.grid['chemotherapy_diffusion_rate'][(4, 4)] = 1.0
+        self.automaton.grid['chemotherapy_diffusion_rate'][(3, 4)] = 0.7
+        self.automaton.grid['chemotherapy_diffusion_rate'][(4, 3)] = 0.6
+        self.automaton.grid['chemotherapy_diffusion_rate'][(4, 5)] = 0.5
+        self.automaton.grid['chemotherapy_diffusion_rate'][(5, 4)] = 0.4
+
+        previous_chemotherapy_at_source_cell = 10.0
+        self.automaton.grid[(4, 4)]['chemotherapy'] = 10.0
+
+        self.automaton.diffusion(True)
+
+        expected_chemotherapy_at_cell = (previous_chemotherapy_at_source_cell) + self.time_params['time_step'] * (
+            (((self.automaton.grid['chemotherapy_diffusion_rate'][(4, 4)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                (3, 4)]) / 2) *
+             (0 - previous_chemotherapy_at_source_cell) -
+             ((self.automaton.grid['chemotherapy_diffusion_rate'][(4, 4)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                 (5, 4)]) / 2) *
+             (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + (((self.automaton.grid['chemotherapy_diffusion_rate'][(4, 4)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                (4, 3)]) / 2) *
+               (0 - previous_chemotherapy_at_source_cell) -
+               ((self.automaton.grid['chemotherapy_diffusion_rate'][(4, 4)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                   (4, 5)]) / 2) *
+               (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemotherapy'], expected_chemotherapy_at_cell)
+        # Neighbours - check the neighbours get the chemotherapy
+        expected_chemotherapy_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['chemotherapy_diffusion_rate'][(3, 4)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemotherapy'], expected_chemotherapy_at_cell)
+        expected_chemotherapy_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['chemotherapy_diffusion_rate'][(5, 4)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemotherapy'], expected_chemotherapy_at_cell)
+        expected_chemotherapy_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['chemotherapy_diffusion_rate'][(4, 3)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemotherapy'], expected_chemotherapy_at_cell)
+        expected_chemotherapy_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.automaton.grid['chemotherapy_diffusion_rate'][(4, 5)] + self.automaton.grid['chemotherapy_diffusion_rate'][
+                (4, 4)]) / 2) *
+             (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], expected_chemotherapy_at_cell)
+
 
 
 if __name__ == '__main__':
