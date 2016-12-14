@@ -205,7 +205,44 @@ class DiffusionTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], expected_chemo_at_cell)
         self.assertEqual(self.automaton.work_grid[(5, 4)]['chemotherapy'], expected_chemo_at_cell)
 
+    def test_chemo_from_source_no_diffusion(self):
+        previous_chemotherapy_at_cell = 0.0
+        self.automaton.grid[(4, 4)]['chemotherapy'] = 0.0
+        # Set from source
+        self.automaton.model_parameters['chemotherapy_from_source'] = 1.0
+        # Turn off diffusion
+        self.automaton.grid['chemotherapy_diffusion_rate'] = np.zeros(self.shape,dtype=float)
 
+        self.automaton.diffusion(True)
+
+        expected_chemotherapy_at_cell = (previous_chemotherapy_at_cell) + self.time_params['time_step'] * (
+            + self.automaton.model_parameters['chemotherapy_from_source'] *
+            self.automaton.model_parameters['blood_vessel_value']
+            + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemotherapy'], expected_chemotherapy_at_cell)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemotherapy'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemotherapy'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemotherapy'], 0.0)
+
+    def test_chemo_decay_no_diffusion(self):
+        previous_chemotherapy_at_cell = 10.0
+        self.automaton.grid[(4, 4)]['chemotherapy'] = 10.0
+        # Set from source
+        self.automaton.model_parameters['chemotherapy_decay'] = 1.0
+        # Turn off diffusion
+        self.automaton.grid['chemotherapy_diffusion_rate'] = np.zeros(self.shape,dtype=float)
+
+        self.automaton.diffusion(True)
+
+        expected_chemotherapy_at_cell = (previous_chemotherapy_at_cell) + self.time_params['time_step'] * (
+            - self.automaton.model_parameters['chemotherapy_decay'] * previous_chemotherapy_at_cell
+            + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemotherapy'], expected_chemotherapy_at_cell)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemotherapy'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemotherapy'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemotherapy'], 0.0)
 
 
 
