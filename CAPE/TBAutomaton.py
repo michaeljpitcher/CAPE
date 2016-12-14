@@ -77,6 +77,10 @@ class TBAutomaton(Automaton):
                                  "t_cells", "caseum"]
 
         self.grids_to_record = ['oxygen', 'chemotherapy', 'chemokine', 'contents']
+
+        # Add an attribute for the maximum neighbourhood depth
+        model_parameters['max_depth'] = 3
+
         # Super class initialisation
         Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
                            self.values_to_record, self.grids_to_record, initialisation)
