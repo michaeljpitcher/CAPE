@@ -22,7 +22,7 @@ class DiffusionTestCase(unittest.TestCase):
         self.model_params['spatial_step'] = 0.2
         self.model_params['oxygen_from_source'] = 0.0
         self.model_params['oxygen_uptake_from_bacteria'] = 0.0
-        self.model_params['chemokine_diffusion'] = 0.0
+        self.model_params['chemokine_diffusion'] = 1.0
         self.model_params['chemokine_from_bacteria'] = 0.0
         self.model_params['chemokine_from_macrophage'] = 0.0
         self.model_params['chemokine_decay'] = 0.0
@@ -297,8 +297,120 @@ class DiffusionTestCase(unittest.TestCase):
              (previous_chemotherapy_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
             + 0 + 0)
         self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], expected_chemotherapy_at_cell)
+        
+    def test_chemokine_diffusion(self):
+
+        self.automaton.grid[(4,4)]['chemokine'] = 10.0
+        self.automaton.diffusion(True)
+
+        previous_chemo_at_source_cell = 10.0
+        expected_chemo_at_cell = (previous_chemo_at_source_cell) + self.time_params['time_step'] * (
+            (((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+             (0 - previous_chemo_at_source_cell) -
+             ((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+             (previous_chemo_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + (((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+               (0 - previous_chemo_at_source_cell) -
+               ((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+               (previous_chemo_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], expected_chemo_at_cell)
+        # Neighbours - check the neighbours get the chemokine
+        previous_chemokine_at_neighb_cell = 0
+        expected_chemo_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+             (previous_chemo_at_source_cell - 0) -
+             ((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+             (0 - 0)) / self.model_params['spatial_step'] ** 2
+            + (((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+               (0 - 0) -
+               ((self.model_params['chemokine_diffusion'] + self.model_params['chemokine_diffusion']) / 2) *
+               (0 - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemokine'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemokine'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemokine'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], expected_chemo_at_cell)
+
+    def test_chemokine_no_diffusion(self):
+
+        self.automaton.model_parameters['chemokine_diffusion'] = 0.0
+        self.automaton.grid[(4,4)]['chemokine'] = 10.0
+        self.automaton.diffusion(True)
+
+        previous_chemo_at_source_cell = 10.0
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], 10.0)
+        # Neighbours - check the neighbours get the chemokine
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], 0.0)
+
+    def test_chemokine_decay_diffusion(self):
+
+        self.automaton.model_parameters['chemokine_diffusion'] = 0.0
+        self.automaton.model_parameters['chemokine_decay'] = 1.0
+        self.automaton.grid[(4,4)]['chemokine'] = 10.0
+        self.automaton.diffusion(True)
+
+        previous_chemo_at_source_cell = 10.0
+        expected_chemo_at_cell = (previous_chemo_at_source_cell) + self.time_params['time_step'] * (
+            -previous_chemo_at_source_cell * self.automaton.model_parameters['chemokine_decay']
+            + 0 + 0
+            )
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], expected_chemo_at_cell)
+        # Neighbours - check the neighbours get the chemokine
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], 0.0)
+
+    def test_chemokine_from_nonresting_mac_diffusion(self):
+
+        self.automaton.model_parameters['chemokine_diffusion'] = 0.0
+        self.automaton.model_parameters['chemokine_from_macrophage'] = 1.0
+        m = Macrophage('active')
+        self.automaton.grid[(4,4)]['contents'] = m
+        self.automaton.grid[(4,4)]['chemokine'] = 10.0
+
+        self.automaton.diffusion(True)
+
+        previous_chemo_at_source_cell = 10.0
+        expected_chemo_at_cell = (previous_chemo_at_source_cell) + self.time_params['time_step'] * (
+            + self.automaton.model_parameters['chemokine_from_macrophage']
+            + 0 + 0
+            )
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], expected_chemo_at_cell)
+        # Neighbours - check the neighbours get the chemokine
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], 0.0)
+
+    def test_chemokine_resting_mac_diffusion(self):
+        self.automaton.model_parameters['chemokine_diffusion'] = 0.0
+        self.automaton.model_parameters['chemokine_from_macrophage'] = 1.0
+        m = Macrophage('resting')
+        self.automaton.grid[(4, 4)]['contents'] = m
+        self.automaton.grid[(4, 4)]['chemokine'] = 10.0
+
+        self.automaton.diffusion(True)
+
+        previous_chemo_at_source_cell = 10.0
+        expected_chemo_at_cell = (previous_chemo_at_source_cell) + self.time_params['time_step'] * (
+            + 0
+            + 0 + 0
+        )
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], expected_chemo_at_cell)
+        # Neighbours - check the neighbours get the chemokine
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemokine'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], 0.0)
 
 
+
+    # TODO need to check edges cases as well :(
 
 if __name__ == '__main__':
     unittest.main()

@@ -237,8 +237,8 @@ class TBAutomaton(Automaton):
               self.model_parameters['chemokine_diffusion'] * (cell['chemokine'] - left['chemokine'])) /
              self.model_parameters['spatial_step'] ** 2) +
              self.model_parameters['chemokine_from_bacteria'] * cell_has_bacteria +
-             self.model_parameters['chemokine_from_macrophage'] *
-             (cell_has_non_resting_macrophage) - self.model_parameters['chemokine_decay'] * cell['chemokine'])
+             (self.model_parameters['chemokine_from_macrophage'] * cell_has_non_resting_macrophage) -
+             self.model_parameters['chemokine_decay'] * cell['chemokine'])
 
         # Edges
         # Top row (no corners) - size (X-2 x Y)
