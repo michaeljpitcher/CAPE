@@ -1,6 +1,8 @@
 import unittest
 from CAPE.CAPEAutomaton import *
-
+import os
+import shutil
+import time
 
 class AutomatonTestCase(unittest.TestCase):
 
@@ -12,10 +14,13 @@ class AutomatonTestCase(unittest.TestCase):
         self.time_params['initial_time'] = 0.0
         self.time_params['time_step'] = 0.1
         self.time_params['time_limit'] = 1.0
+        self.time_params['interval_to_record_grid'] = 100.0
+        self.time_params['interval_to_record_counts'] = 100.0
         self.model_params = {}
         self.model_params['param1'] = 1
         self.model_params['param2'] = 10
         self.model_params['param3'] = 100
+        self.model_params['max_depth'] = 3
         self.initialise = {}
         self.initialise['a'] = {}
         self.initialise['a'][(1,1)] = 8.8
@@ -25,8 +30,18 @@ class AutomatonTestCase(unittest.TestCase):
         self.initialise['c'][(3, 3)] = dict()
         self.initialise['c'][(3, 3)]['test'] = 99
         self.initialise['c'][(4, 4)] = Agent()
+        self.output_loc = 'test_output'
+        self.record_values = ['col_1', 'col_2', 'col_3']
+        self.grid_records = ['a', 'b']
+        if not os.path.exists(self.output_loc):
+            os.makedirs(self.output_loc)
         self.automaton = Automaton(self.shape, self.attributes, self.formats, self.time_params, self.model_params,
-                                   self.initialise)
+                                   self.output_loc, self.record_values, self.grid_records, self.initialise)
+
+    def tearDown(self):
+        # Close output files and delete
+        self.automaton.close_files()
+        shutil.rmtree(self.output_loc)
 
     def test_initialise(self):
         self.assertItemsEqual(self.attributes, self.automaton.attributes)
@@ -57,8 +72,10 @@ class AutomatonTestCase(unittest.TestCase):
                 elif (x == 4 and y == 4):
                     self.assertTrue(isinstance(self.automaton.grid[(x, y)]['c'], Agent))
 
-    def test_neighbour_addresses(self):
-        pass
+        # Files
+        self.assertTrue(os.path.exists(self.output_loc + '/' + 'counts.csv'))
+        for x in self.attributes:
+            self.assertEqual(os.path.exists(self.output_loc + '/' + str(x) + '.csv'), x in self.grid_records)
 
     def test_run_not_overriden(self):
         with self.assertRaises(NotImplementedError) as context:
@@ -66,8 +83,10 @@ class AutomatonTestCase(unittest.TestCase):
 
     def test_run_override(self):
         class TestAutomaton(Automaton):
-            def __init__(self, shape, attributes, formats, time_parameters, model_parameters, initialisation):
-                Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, initialisation)
+            def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
+                         record_values, record_grids, initialisation):
+                Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
+                         record_values, record_grids, initialisation)
 
             def update_agents(self):
                 pass
@@ -75,8 +94,11 @@ class AutomatonTestCase(unittest.TestCase):
             def update_cells(self):
                 pass
 
+            def record_counts(self):
+                pass
+
         test_automaton = TestAutomaton(self.shape, self.attributes, self.formats, self.time_params, self.model_params,
-                                       self.initialise)
+                                   self.output_loc, self.record_values, self.grid_records, self.initialise)
 
         test_automaton.run()
         self.assertEqual(test_automaton.time, self.time_params['initial_time'] +
@@ -146,6 +168,9 @@ class AutomatonTestCase(unittest.TestCase):
 
         print self.automaton.moore_neighbours((0,0), 1).keys()
         print self.automaton.moore_neighbours((0, 0), 2).keys()
+
+    def test_record_grids(self):
+        self.automaton.record_grids()
 
 
 if __name__ == '__main__':
