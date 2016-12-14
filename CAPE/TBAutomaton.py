@@ -198,7 +198,6 @@ class TBAutomaton(Automaton):
         cell_has_bacteria = function_bac(cell['contents'])
         cell_has_non_resting_macrophage = function_mac(cell['contents'])
 
-        print cell_has_non_resting_macrophage
         # oxygen
         self.work_grid['oxygen'][1:-1,1:-1] = cell['oxygen'] + self.time_step * \
             (((((cell['oxygen_diffusion_rate'] + below['oxygen_diffusion_rate'])/2) *
@@ -213,7 +212,6 @@ class TBAutomaton(Automaton):
             self.model_parameters['spatial_step'] ** 2) +
             (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) -
             (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] * cell_has_bacteria))
-
 
         # chemotherapy
         if chemo:
