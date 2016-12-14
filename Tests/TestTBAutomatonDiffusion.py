@@ -18,7 +18,7 @@ class DiffusionTestCase(unittest.TestCase):
         self.model_params['blood_vessel_value'] = 1.0
         self.model_params['initial_oxygen'] = 1.0
         self.model_params['oxygen_diffusion'] = 1.0
-        self.model_params['chemotherapy_diffusion'] = 0.0
+        self.model_params['chemotherapy_diffusion'] = 1.0
         self.model_params['spatial_step'] = 0.2
         self.model_params['oxygen_from_source'] = 0.0
         self.model_params['oxygen_uptake_from_bacteria'] = 0.0
@@ -26,6 +26,8 @@ class DiffusionTestCase(unittest.TestCase):
         self.model_params['chemokine_from_bacteria'] = 0.0
         self.model_params['chemokine_from_macrophage'] = 0.0
         self.model_params['chemokine_decay'] = 0.0
+        self.model_params['chemotherapy_from_source'] = 0.0
+        self.model_params['chemotherapy_decay'] = 0.0
 
         self.bv = [(4,4)]
         self.macs = []
@@ -168,6 +170,43 @@ class DiffusionTestCase(unittest.TestCase):
              (previous_oxygen_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
             + 0 + 0)
         self.assertEqual(self.automaton.work_grid[(4, 5)]['oxygen'], expected_oxygen_at_cell)
+
+    def test_chemotherapy_diffusion(self):
+
+        self.automaton.grid[(4,4)]['chemotherapy'] = 10.0
+        self.automaton.diffusion(True)
+
+        previous_chemo_at_source_cell = 10.0
+        expected_chemo_at_cell = (previous_chemo_at_source_cell) + self.time_params['time_step'] * (
+            (((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+             (0 - previous_chemo_at_source_cell) -
+             ((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+             (previous_chemo_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + (((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+               (0 - previous_chemo_at_source_cell) -
+               ((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+               (previous_chemo_at_source_cell - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemotherapy'], expected_chemo_at_cell)
+        # Neighbours - check the neighbours get the chemotherapy
+        previous_chemotherapy_at_neighb_cell = 0
+        expected_chemo_at_cell = (0) + self.time_params['time_step'] * (
+            (((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+             (previous_chemo_at_source_cell - 0) -
+             ((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+             (0 - 0)) / self.model_params['spatial_step'] ** 2
+            + (((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+               (0 - 0) -
+               ((self.model_params['chemotherapy_diffusion'] + self.model_params['chemotherapy_diffusion']) / 2) *
+               (0 - 0)) / self.model_params['spatial_step'] ** 2
+            + 0 + 0)
+        self.assertEqual(self.automaton.work_grid[(3, 4)]['chemotherapy'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(4, 3)]['chemotherapy'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(4, 5)]['chemotherapy'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['chemotherapy'], expected_chemo_at_cell)
+
+
+
 
 
 if __name__ == '__main__':
