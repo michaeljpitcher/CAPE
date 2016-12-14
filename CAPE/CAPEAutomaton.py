@@ -10,9 +10,11 @@ import csv
 
 class Automaton:
 
-    def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location, initialisation):
+    def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location, values_to_record,
+                 initialisation):
         self.attributes = attributes
         self.model_parameters = model_parameters
+        self.time_parameters = time_parameters
         self.dimensions = 2
         self.max_depth = 3
 
@@ -21,6 +23,12 @@ class Automaton:
             output_location += '/'
         self.output_location = output_location
         self.grid_file = open(output_location + 'grid.csv', 'w')
+        self.count_file = open(output_location + 'counts.csv', 'w')
+
+        writer = csv.writer(self.count_file, delimiter=',')
+        row = ['timestep']
+        row += values_to_record
+        writer.writerow(row)
 
         assert ('initial_time' in time_parameters.keys()), "Time parameter 'initial_time' must be defined"
         self.time = time_parameters['initial_time']
@@ -73,12 +81,21 @@ class Automaton:
             self.moore_relative[depth] = reduced_row_moore
 
     def run(self):
-
         while self.time < self.time_limit:
+            # Output to console
             self.timestep_output()
+            # Run cellular automaton update
             self.update_cells()
+            # Run agent-based model update
             self.update_agents()
+            # Swap grids
             self.grid, self.work_grid = self.work_grid, self.grid
+            # Recording
+            if self.time % self.time_parameters['interval_to_record_grid'] == 0:
+                self.record_grid()
+            if self.time % self.time_parameters['interval_to_record_counts'] == 0:
+                self.record_counts()
+            # Increment time
             self.time += 1
 
     def timestep_output(self):
@@ -127,6 +144,9 @@ class Automaton:
                 else:
                     row.append(0.0)
             writer.writerow(row)
+
+    def record_counts(self):
+        raise NotImplementedError
 
 
 class Agent:

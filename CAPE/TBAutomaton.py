@@ -55,14 +55,44 @@ class TBAutomaton(Automaton):
                 initialisation['oxygen_diffusion_rate'][(x,y)] = model_parameters['oxygen_diffusion']
                 initialisation['chemotherapy_diffusion_rate'][(x, y)] = model_parameters['chemotherapy_diffusion']
 
+        self.values_to_record = ["fast_bacteria", "fast_bacteria_resting", "slow_bacteria", "slow_bacteria_resting",
+                                 "intracellular_bac", "total_bacteria",
+                                 "resting_macrophages", "active_macrophages", "infected_macrophages",
+                                 "chron_infected_macrophages", "total_macrophages",
+                                 "t_cells", "caseum"]
+
         Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
-                           initialisation)
+                           self.values_to_record, initialisation)
 
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
                                                        self.model_parameters['chemotherapy_schedule1_start_upper'])
 
     def timestep_output(self):
         print "t = ", self.time * self.time_step, "Bac = ", len(self.bacteria)
+
+    def record_counts(self):
+        writer = csv.writer(self.count_file, delimiter=',')
+
+        fast_bac_count = len([b for b in self.bacteria if b.metabolism == 'fast' and not b.resting])
+        fast_bac_rest_count = len([b for b in self.bacteria if b.metabolism == 'fast' and b.resting])
+        slow_bac_count = len([b for b in self.bacteria if b.metabolism == 'slow' and not b.resting])
+        slow_bac_rest_count = len([b for b in self.bacteria if b.metabolism == 'slow' and b.resting])
+        intracell_bac_count = sum([m.intracellular_bacteria for m in self.macrophages])
+        total_bac_count = fast_bac_count + fast_bac_rest_count + slow_bac_count + slow_bac_rest_count + \
+                          intracell_bac_count
+        rest_mac_count = len([m for m in self.macrophages if m.state == 'resting'])
+        active_mac_count = len([m for m in self.macrophages if m.state == 'active'])
+        inf_mac_count = len([m for m in self.macrophages if m.state == 'infected'])
+        chr_inf_mac_count = len([m for m in self.macrophages if m.state == 'chr_inf'])
+        total_mac_count = rest_mac_count + active_mac_count + inf_mac_count + chr_inf_mac_count
+        t_cell_count = len(self.tcells)
+        caseum_count = len(self.caseum_addresses)
+
+        row = [self.time * self.time_step, fast_bac_count, fast_bac_rest_count, slow_bac_count, slow_bac_rest_count,
+               intracell_bac_count, total_bac_count, rest_mac_count, active_mac_count, inf_mac_count, chr_inf_mac_count,
+               total_mac_count, t_cell_count, caseum_count]
+
+        writer.writerow(row)
 
     def update_cells(self):
         self.diffusion_pre_process()
@@ -459,6 +489,7 @@ class Bacterium(Agent):
             code += 0.5
         return code
 
+
 class Caseum(Agent):
 
     def __init__(self):
@@ -500,7 +531,9 @@ if __name__ == '__main__':
     time_params={}
     time_params['initial_time'] = 0.0
     time_params['time_step'] = 0.001
-    time_params['time_limit'] = 100.0
+    time_params['time_limit'] = 1.0
+    time_params['interval_to_record_grid'] = 100.0
+    time_params['interval_to_record_counts'] = 1.0
 
     model_params = {}
     model_params['spatial_step'] = 0.1
@@ -521,5 +554,5 @@ if __name__ == '__main__':
     model_params['chemotherapy_schedule2_start'] = 2.0
 
     start_time = time.time()
-    tba = TBAutomaton((100, 100), time_params, model_params, "output", [], [], [], [])
+    tba = TBAutomaton((100, 100), time_params, model_params, "output", [], [], [(1,1)], [(0,0)])
     tba.run()
