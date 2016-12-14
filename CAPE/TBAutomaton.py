@@ -8,10 +8,25 @@ class TBAutomaton(Automaton):
     def __init__(self, shape, time_parameters, model_parameters, output_location,
                  blood_vessel_addresses, initial_macrophage_addresses,
                  initial_fast_bacteria_addresses, initial_slow_bacteria_addresses):
+        """
+        Specific model of CAPE Automaton to investigate TB infection. Grid is square of alveolar tissue, agents are
+        bacteria and immune cells that act upon the tissue. Cellular automaton handles diffusion of oxygen,
+        chemotherapy and chemokine
+        :param shape: Shape of grid
+        :param time_parameters: Time specific parameters
+        :param model_parameters: Model parameters
+        :param output_location: Location output files will be written to
+        :param blood_vessel_addresses: Addresses to place blood vessels
+        :param initial_macrophage_addresses: Addresses to place macrophages
+        :param initial_fast_bacteria_addresses: Addresses to place fast bacteria
+        :param initial_slow_bacteria_addresses: Addresses to place slow bacteria
+        """
+        # Hard-coded attributes and formats
         attributes = ['oxygen', 'chemotherapy', 'chemokine', 'contents', 'oxygen_diffusion_rate',
                       'chemotherapy_diffusion_rate', 'blood_vessel']
         formats = ['float', 'float', 'float', 'object', 'float', 'float', 'float']
 
+        # Initialise list (blood vessels never change)
         self.blood_vessel_addresses = blood_vessel_addresses
         self.macrophages = []
         self.bacteria = []
@@ -25,7 +40,6 @@ class TBAutomaton(Automaton):
         initialisation['oxygen_diffusion_rate'] = {}
         initialisation['chemotherapy_diffusion_rate'] = {}
         initialisation['blood_vessel'] = {}
-
         # Blood vessels & oxygen
         self.blood_vessel_addresses = blood_vessel_addresses
         for bva in blood_vessel_addresses:
@@ -55,22 +69,31 @@ class TBAutomaton(Automaton):
                 initialisation['oxygen_diffusion_rate'][(x,y)] = model_parameters['oxygen_diffusion']
                 initialisation['chemotherapy_diffusion_rate'][(x, y)] = model_parameters['chemotherapy_diffusion']
 
+        # Hard-coded column headers for recording
         self.values_to_record = ["fast_bacteria", "fast_bacteria_resting", "slow_bacteria", "slow_bacteria_resting",
                                  "intracellular_bac", "total_bacteria",
                                  "resting_macrophages", "active_macrophages", "infected_macrophages",
                                  "chron_infected_macrophages", "total_macrophages",
                                  "t_cells", "caseum"]
 
+        self.grids_to_record = ['oxygen', 'chemotherapy', 'chemokine', 'contents']
+        # Super class initialisation
         Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
-                           self.values_to_record, initialisation)
+                           self.values_to_record, self.grids_to_record, initialisation)
 
+        # Chemotherapy scheduling
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
                                                        self.model_parameters['chemotherapy_schedule1_start_upper'])
 
     def timestep_output(self):
+        """
+        Output to console at each timestep
+        :return:
+        """
         print "t = ", self.time * self.time_step, "Bac = ", len(self.bacteria)
 
     def record_counts(self):
+        # Count up the totals of each bacteria, macrophage, etc and write the to the file
         writer = csv.writer(self.count_file, delimiter=',')
 
         fast_bac_count = len([b for b in self.bacteria if b.metabolism == 'fast' and not b.resting])
@@ -95,6 +118,11 @@ class TBAutomaton(Automaton):
         writer.writerow(row)
 
     def update_cells(self):
+        """
+        Run the cellular automaton update. Runs pre-process first to determine diffusion rates. Then runs diffusion
+        to calculate new values (written to work grid)
+        :return:
+        """
         self.diffusion_pre_process()
         chemo = (self.chemo_schedule1_start / self.time_step) <= self.time < \
                 (self.model_parameters['chemotherapy_schedule1_end'] / self.time_step) or \
@@ -102,25 +130,51 @@ class TBAutomaton(Automaton):
         self.diffusion(chemo)
 
     def diffusion_pre_process(self):
-        affected_addresses = []
+        """
+        Pre-processing to calculate diffusion rates. If a cell is too close to too much caseum (determined by model
+        parameters caseum_distance_to_reduce_diffusion and caseum_threshold_to_reduce_diffusion, then it's diffusion
+        rates (and excretion rate if a blood vessel is present) are decreased.
+        :return:
+        """
 
+        # Loop through every caseum address and record the addresses that are within the required distance
+        affected_addresses = []
         for caseum_address in self.caseum_addresses:
             for d in range(self.model_parameters['caseum_distance_to_reduce_diffusion']):
                 neighbours = self.moore_neighbours(caseum_address,d)
                 affected_addresses += neighbours
 
-        # Affected addresses is now a list of all address within the range of cells with caseum
+        # Affected addresses is now a list of all address within the range of cells with caseum. Multiple records of the
+        # same address imply cell is too close to more than one caseum. So count how often each address appears.
         counted = Counter(affected_addresses)
         for address in counted:
+            # If the count is greater than the threshold, reduce diffusion
             if counted[address] >= self.model_parameters['caseum_threshold_to_reduce_diffusion']:
                 self.grid[address]['oxygen_diffusion_rate'] = self.model_parameters['oxygen_diffusion'] / \
                                                               self.model_parameters['diffusion_caseum_reduction']
                 self.grid[address]['chemotherapy_diffusion_rate'] = self.model_parameters['chemotherapy_diffusion'] / \
                                                         self.model_parameters['diffusion_caseum_reduction']
+                # Reduce excretion if blood vessel
                 if self.grid[address]['blood_vessel'] > 0.0:
                     self.grid[address]['blood_vessel'] /= self.model_parameters['diffusion_caseum_reduction']
 
     def diffusion(self, chemo):
+        """
+        Calculate new values from diffusion of chemicals (oxygen, chemotherapy, chemokine). Finite difference scheme
+        based on the differences between value in the cell and values in von Neumann neighbours to depth 1, and the
+        contents of the cell. Different equations for center cells (who have all 4 neighbours) and edge cells (who have
+        less than 4).
+        :param chemo: Boolean to indicate if chemo is present.
+        :return:
+        """
+
+        # TODO - veeeeery long (but based off TBModel.cpp). Have to cater for edge cases separately as they have
+        # different equations
+
+        # Diffusion works by taking a section of the grid, taking corresponding neighbour grids of same size by slicing
+        # the original grid with an offset. Results in 5 grids of the same size. Then can apply the diffusion function
+        # to all cells at once within that sub-grid
+
         # Center grid (of size X-2 x Y-2)
         cell = self.grid[1:-1, 1:-1]
         above = self.grid[:-2, 1:-1]
@@ -469,6 +523,9 @@ class TBAutomaton(Automaton):
             (isinstance(cell['contents'], Macrophage) and cell['contents'].state != 'resting') +
             self.model_parameters['chemokine_decay'] * cell['chemokine']
         )
+
+        if not chemo:
+            self.work_grid['chemotherapy'] = np.zeros(self.grid.shape,dtype=float)
 
     def update_agents(self):
         pass
