@@ -9,7 +9,7 @@ import csv
 class Automaton:
 
     def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location, values_to_record,
-                 initialisation):
+                 attribute_grids_to_record, initialisation):
         """
         Hybrid cellular automaton and agent-based model.
         :param shape: Shape of cellular grid (lattice)
@@ -18,6 +18,7 @@ class Automaton:
         :param time_parameters: Time specific parameters of the system
         :param model_parameters: Model parameters
         :param output_location: OS location where output from system will be written to
+        :param attribute_grids_to_record: list of attributes that require recording
         :param values_to_record: Column headers for csv file of record counts
         :param initialisation: Dictionary of objects/values to be assigned to attributes at beginning of run
         """
@@ -32,7 +33,13 @@ class Automaton:
         if output_location != '':
             output_location += '/'
         self.output_location = output_location
-        self.grid_file = open(output_location + 'grid.csv', 'w')
+
+        self.grid_files = {}
+        for attribute in attribute_grids_to_record:
+            assert attribute in self.attributes, "Incorrect attribute to record: {0} is not in attribute list"\
+                .format(attribute)
+            self.grid_files[attribute] = open(output_location + attribute + '.csv', 'w')
+
         self.count_file = open(output_location + 'counts.csv', 'w')
         # Initialise the count csv file with the column headers
         writer = csv.writer(self.count_file, delimiter=',')
@@ -61,6 +68,7 @@ class Automaton:
                 self.grid[address][attribute] = values[address]
                 if isinstance(values[address], Agent):
                     self.agents.append(values[address])
+
         # NEIGHBOURHOODS
         # Builds dictionaries of neighbour cells for use with neighbour functions
         # Initialise empty dictionaries
@@ -91,12 +99,24 @@ class Automaton:
                         break
             self.moore_relative[depth] = reduced_row_moore
 
+    def close_files(self):
+        """
+        Close all files
+        :return:
+        """
+        for grid_file in self.grid_files.values():
+            grid_file.close()
+        self.count_file.close()
+
     def run(self):
         """
         Run the automaton from start time to time limit
         :return:
         """
+        # Record the initial state
+        self.record()
         while self.time < self.time_limit:
+
             # Output to console
             self.timestep_output()
             # Run cellular automaton update
@@ -105,13 +125,17 @@ class Automaton:
             self.update_agents()
             # Swap grids
             self.grid, self.work_grid = self.work_grid, self.grid
-            # Recording
-            if self.time % self.time_parameters['interval_to_record_grid'] == 0:
-                self.record_grid()
-            if self.time % self.time_parameters['interval_to_record_counts'] == 0:
-                self.record_counts()
-            # Increment time
+
+            # Increment time & record if needed
             self.time += 1
+            self.record()
+
+    def record(self):
+        # Recording
+        if self.time % self.time_parameters['interval_to_record_grid'] == 0:
+            self.record_grids()
+        if self.time % self.time_parameters['interval_to_record_counts'] == 0:
+            self.record_counts()
 
     def timestep_output(self):
         """
@@ -186,23 +210,29 @@ class Automaton:
         """
         return self.neighbours(address, depth, 'von_neumann')
 
-    def record_grid(self):
+    def record_grids(self):
         """
         Write the contents of the grid to the output file (based on specified agent codes)
         :return:
         """
-        writer = csv.writer(self.grid_file, delimiter=',')
+        writers= {}
+        for a in self.grid_files:
+            writers[a] = csv.writer(self.grid_files[a], delimiter=',')
         # Loop through every cell
         for i in range(self.grid.shape[0]):
-            row = []
+            rows = {}
+            for a in writers:
+                rows[a] = []
             for j in range(self.grid.shape[1]):
                 # Write the value (or code if it's an agent)
-                contents = self.grid[(i,j)]['contents']
-                if isinstance(contents, Agent):
-                    row.append(contents.output_code())
-                else:
-                    row.append(0.0)
-            writer.writerow(row)
+                for a in writers:
+                    value = self.grid[(i,j)][a]
+                    if isinstance(value, Agent):
+                        rows[a].append(value.output_code())
+                    else:
+                        rows[a].append(value)
+            for a in writers:
+                writers[a].writerow(rows[a])
 
     def record_counts(self):
         """
