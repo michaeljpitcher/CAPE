@@ -166,11 +166,57 @@ class AutomatonTestCase(unittest.TestCase):
         neighbours_5_5_1 = self.automaton.von_neumann_neighbours((5, 5), 1)
         self.assertItemsEqual(neighbours_5_5_1.keys(), [(4,5),(5,4),(5,6),(6,5)])
 
-        print self.automaton.moore_neighbours((0,0), 1).keys()
-        print self.automaton.moore_neighbours((0, 0), 2).keys()
-
     def test_record_grids(self):
+        # 2 records - check both are in the output file
+
+        # Populate atts a & b with random values
+        for x in range(10):
+            for y in range(10):
+                self.automaton.grid[(x, y)]['a'] = np.random.random()
+                self.automaton.grid[(x, y)]['b'] = np.random.randint(0,10)
+        # Record grids
         self.automaton.record_grids()
+        self.assertTrue(os.path.exists(self.output_loc + '/' + 'a.csv'))
+        self.assertTrue(os.path.exists(self.output_loc + '/' + 'b.csv'))
+        # save the grid values
+        grid_at_step_1 = self.automaton.grid.copy()
+        # Update the values and record again
+        # Populate atts a & b with random values
+        for x in range(10):
+            for y in range(10):
+                self.automaton.grid[(x, y)]['a'] = np.random.random()
+                self.automaton.grid[(x, y)]['b'] = np.random.randint(0, 10)
+            # Record grids
+        self.automaton.record_grids()
+        # save the grid values
+        grid_at_step_2 = self.automaton.grid.copy()
+
+        # Close files to be able to read them for test
+        self.automaton.close_files()
+
+        with open(self.output_loc + '/' + 'a.csv', 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            row_index = 0
+            for row in reader:
+                if row_index < 10:
+                    for col_index in range(len(row)):
+                        self.assertEqual(float(row[col_index]), grid_at_step_1[(row_index, col_index)]['a'])
+                else:
+                    for col_index in range(len(row)):
+                        self.assertEqual(float(row[col_index]), grid_at_step_2[(row_index-10, col_index)]['a'])
+                row_index += 1
+        with open(self.output_loc + '/' + 'b.csv', 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            row_index = 0
+            for row in reader:
+                if row_index < 10:
+                    for col_index in range(len(row)):
+                        self.assertEqual(float(row[col_index]), grid_at_step_1[(row_index, col_index)]['b'])
+                else:
+                    for col_index in range(len(row)):
+                        self.assertEqual(float(row[col_index]), grid_at_step_2[(row_index-10, col_index)]['b'])
+                row_index += 1
+
 
 
 if __name__ == '__main__':
