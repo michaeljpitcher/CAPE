@@ -668,6 +668,8 @@ if __name__ == '__main__':
     automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
                             blood_vessels, macrophages, fast_bacteria, slow_bacteria)
 
+    automaton.run()
+
     whole_end_time = time.time()
     print "End:     {", whole_end_time, "}"
     print "Duration: ", whole_end_time - whole_start_time
