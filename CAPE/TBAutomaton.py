@@ -1,5 +1,4 @@
 from CAPEAutomaton import *
-
 # ---------------------------------------- TB -------------------------------------------------------
 
 
@@ -526,33 +525,149 @@ class Macrophage(Agent):
         return code
 
 
+# ---------------------------------------- Runner -------------------------------------------------------
+
+
+def initialise(config, total_shape):
+    """
+    Convert the defined lists/settings into a series of coordinates for initialisation of the automaton
+    :param config:
+    :param total_shape:
+    :return:
+    """
+
+    available_addresses = []
+    for a in itertools.product(range(total_shape[0]), range(total_shape[1])):
+        available_addresses.append(a)
+
+    # BLOOD_VESSELS
+    blood_vessels_method = config.get("InitialiseSection", "blood_vessels")
+    blood_vessel_addresses = []
+
+    if blood_vessels_method == 'hard_code':
+        bv_list = config.get("InitialiseSection", 'blood_vessels_hard_code').split('/')
+        for b in bv_list:
+            address = tuple(int(c) for c in b.split(","))
+            available_addresses.remove(address)
+            blood_vessel_addresses.append(address)
+    elif blood_vessels_method == 'from_file':
+        path = config.get("InitialiseSection", 'blood_vessels_from_file')
+        # Add the values to the list
+        list_of_vessels = [line.rstrip('\n') for line in open(path)]
+        for index in range(len(list_of_vessels)):
+            if float(list_of_vessels[index]) > 0.0:
+                try:
+                    address = np.unravel_index(index, total_shape)
+                except ValueError:
+                    raise Exception(index, total_shape)
+                blood_vessel_addresses.append(address)
+                available_addresses.remove(address)
+    elif blood_vessels_method == 'random':
+        number = config.getint("InitialiseSection", "blood_vessels_random_number")
+        assert len(available_addresses) > number
+        for i in range(number):
+            address = available_addresses.pop(np.random.randint(0, len(available_addresses)))
+            blood_vessel_addresses.append(address)
+
+    # FAST BACTERIA
+    bacteria_method = config.get("InitialiseSection", "bacteria")
+    fast_addresses = []
+    slow_addresses = []
+
+    if bacteria_method == 'hard_code':
+        fast_list = config.get("InitialiseSection", "bacteria_fast_hard_code").split("/")
+
+        assert len(available_addresses) > len(fast_list)
+        for a in fast_list:
+            address = tuple(int(c) for c in a.split(","))
+            if address in available_addresses:
+                fast_addresses.append(address)
+                available_addresses.remove(address)
+            else:
+                # TODO - avoid conflict
+                pass
+
+        slow_list = config.get("InitialiseSection", "bacteria_slow_hard_code").split("/")
+        assert len(available_addresses) > len(slow_list)
+        for a in slow_list:
+            address = tuple(int(c) for c in a.split(","))
+            if address not in blood_vessel_addresses:
+                slow_addresses.append(address)
+                available_addresses.remove(address)
+            else:
+                # TODO - avoid conflict
+                pass
+    elif bacteria_method == 'random':
+        number_fast = config.getint("InitialiseSection", "bacteria_fast_random_number")
+        assert len(available_addresses) > number_fast
+        for i in range(number_fast):
+            address = available_addresses.pop(np.random.randint(0, len(available_addresses)))
+            fast_addresses.append(address)
+
+        number_slow = config.getint("InitialiseSection", "bacteria_slow_random_number")
+        assert len(available_addresses) > number_slow
+        for i in range(number_slow):
+            address = available_addresses.pop(np.random.randint(0, len(available_addresses)))
+            slow_addresses.append(address)
+
+    # MACROPHAGES
+    macrophage_method = config.get("InitialiseSection", "macrophages")
+    macrophage_addresses = []
+    if macrophage_method == 'random':
+        number = config.getint("InitialiseSection", "macrophages_random_number")
+
+        # Make sure there's enough room
+        assert len(available_addresses) > number
+
+        for i in range(number):
+            address = available_addresses.pop(np.random.randint(0, len(available_addresses)))
+            macrophage_addresses.append(address)
+    # TODO: hard-code macrophages?
+
+    return blood_vessel_addresses, fast_addresses, slow_addresses, macrophage_addresses
+
+
 if __name__ == '__main__':
 
-    time_params={}
-    time_params['initial_time'] = 0.0
-    time_params['time_step'] = 0.001
-    time_params['time_limit'] = 1.0
-    time_params['interval_to_record_grid'] = 100.0
-    time_params['interval_to_record_counts'] = 1.0
+    print '------------------------'
+    print 'TB Simulation Automaton'
+    print '------------------------'
+    whole_start_time = time.time()
+    print "Begin:   {", whole_start_time, "}"
 
-    model_params = {}
-    model_params['spatial_step'] = 0.1
-    model_params['oxygen_from_source'] = 0.1
-    model_params['blood_vessel_value'] = 0.1
-    model_params['oxygen_uptake_from_bacteria'] = 0.1
-    model_params['chemotherapy_from_source'] = 0.1
-    model_params['chemotherapy_decay'] = 0.1
-    model_params['chemokine_diffusion'] = 0.1
-    model_params['chemokine_from_bacteria'] = 0.1
-    model_params['chemokine_from_macrophage'] = 0.1
-    model_params['chemokine_decay'] = 0.1
-    model_params['oxygen_diffusion'] = 0.1
-    model_params['chemotherapy_diffusion'] = 0.1
-    model_params['chemotherapy_schedule1_start_lower'] = 1.0
-    model_params['chemotherapy_schedule1_start_upper'] = 2.0
-    model_params['chemotherapy_schedule1_end'] = 2.0
-    model_params['chemotherapy_schedule2_start'] = 2.0
+    import ConfigParser
+    import os
 
-    start_time = time.time()
-    tba = TBAutomaton((100, 100), time_params, model_params, "output", [], [], [(1,1)], [(0,0)])
-    tba.run()
+    config = ConfigParser.RawConfigParser()
+    if not config.read('config.properties'):
+        raise IOError("Config file (config.properties) not found")
+
+    # LOAD PARAMETERS
+    parameters = {}
+    # Get all options in parameters section and add to the dictionary
+    for i in config.options("ParametersSection"):
+        parameters[i] = config.getfloat("ParametersSection", i)
+
+    # TIME PARAMETERS
+    time_parameters = {}
+    # Get all options in time parameters section
+    for i in config.options("TimeParametersSection"):
+        time_parameters[i] = config.getfloat("TimeParametersSection", i)
+
+    # LOAD GRID ATTRIBUTES
+    total_shape = [int(a) for a in config.get("GridSection", "total_shape").split(",")]
+
+    # LOAD RUN PARAMETERS
+    output_location = config.get("RunParametersSection", "output_location")
+    if not os.path.exists(output_location):
+        os.makedirs(output_location)
+
+    # LOAD INITIALISATION
+    blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise(config, total_shape)
+
+    automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
+                            blood_vessels, macrophages, fast_bacteria, slow_bacteria)
+
+    whole_end_time = time.time()
+    print "End:     {", whole_end_time, "}"
+    print "Duration: ", whole_end_time - whole_start_time
