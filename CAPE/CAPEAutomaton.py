@@ -99,6 +99,10 @@ class Automaton:
                         break
             self.moore_relative[depth] = reduced_row_moore
 
+        # Event lists
+        self.potential_events = []
+        self.acceptable_events = []
+
     def close_files(self):
         """
         Close all files
@@ -121,8 +125,17 @@ class Automaton:
             self.timestep_output()
             # Run cellular automaton update
             self.update_cells()
+
+            self.potential_events = []
+            self.acceptable_events = []
+
             # Run agent-based model update
             self.update_agents()
+
+            self.conflict_resolve_events()
+
+            self.perform_events()
+
             # Swap grids
             self.grid, self.work_grid = self.work_grid, self.grid
 
@@ -239,6 +252,12 @@ class Automaton:
         Records the counts of various items. Must be overriden by subclass.
         :return:
         """
+        raise NotImplementedError
+
+    def conflict_resolve_events(self):
+        raise NotImplementedError
+
+    def perform_events(self):
         raise NotImplementedError
 
 
