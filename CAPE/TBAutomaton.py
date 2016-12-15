@@ -1,5 +1,6 @@
 from CAPEAutomaton import *
 from collections import Counter
+import cProfile
 # ---------------------------------------- TB -------------------------------------------------------
 
 
@@ -179,12 +180,17 @@ class TBAutomaton(Automaton):
         # the original grid with an offset. Results in 5 grids of the same size. Then can apply the diffusion function
         # to all cells at once within that sub-grid
 
-        # Get an array of 0 / 1 for whether the cell has a bacterium
-        def has_bacteria(cell):
-            return isinstance(cell, Bacterium)
-
-        def has_macrophage(cell):
-            return int(isinstance(cell, Macrophage) and cell.state != 'resting')
+        # Need to check contents. Function returns 1 if bacterium, -1 if non-resting macrophage and 0 otherwise
+        def contents_check(cell):
+            if isinstance(cell, Bacterium):
+                return 1
+            elif (isinstance(cell, Macrophage) and cell.state != 'resting'):
+                return -1
+            else:
+                return 0
+        # Return a grid of same shape as regular grid, with value 1, -1 or 0 to indicate presence of bacteria/macrophage
+        vfunction_bac = np.vectorize(contents_check)
+        grid_contents = vfunction_bac(self.grid['contents'])
 
         # Center grid (of size X-2 x Y-2)
         cell = self.grid[1:-1, 1:-1]
@@ -192,11 +198,9 @@ class TBAutomaton(Automaton):
         below = self.grid[2:, 1:-1]
         left = self.grid[1:-1, :-2]
         right = self.grid[1:-1, 2:]
-
-        function_bac = np.vectorize(has_bacteria)
-        function_mac = np.vectorize(has_macrophage)
-        cell_has_bacteria = function_bac(cell['contents'])
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
+        cell_has_bacteria = grid_contents[1:-1, 1:-1]
+        # Multiply by -1 to give grid of 0s and 1s for macrophages
+        cell_has_non_resting_macrophage = grid_contents[1:-1, 1:-1] * -1
 
         # oxygen
         self.work_grid['oxygen'][1:-1,1:-1] = cell['oxygen'] + self.time_step * \
@@ -218,7 +222,7 @@ class TBAutomaton(Automaton):
             self.work_grid['chemotherapy'][1:-1, 1:-1] = cell['chemotherapy'] + self.time_step * \
                 (((((cell['chemotherapy_diffusion_rate'] + below['chemotherapy_diffusion_rate']) / 2) *
                     (below['chemotherapy'] - cell['chemotherapy']) -
-                    ((cell['chemotherapy_diffusion_rate'] +above['chemotherapy_diffusion_rate']) / 2) *
+                    ((cell['chemotherapy_diffusion_rate'] + above['chemotherapy_diffusion_rate']) / 2) *
                     (cell['chemotherapy'] - above['chemotherapy'])) /
                     self.model_parameters['spatial_step'] ** 2) +
                     ((((cell['chemotherapy_diffusion_rate'] + right['chemotherapy_diffusion_rate']) / 2) *
@@ -246,153 +250,128 @@ class TBAutomaton(Automaton):
         below = self.grid[1:2, 1:-1]
         left = self.grid[:1, 0:-2]
         right = self.grid[:1, 2:]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][:1, 1:-1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (below['oxygen'] - 2 * cell['oxygen'] + below['oxygen'])) /
-            self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (left['oxygen'] - 2 * cell['oxygen'] + right['oxygen'])) /
-            self.model_parameters['spatial_step'] ** 2)+
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][:1, 1:-1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (below['chemotherapy'] - 2 * cell['chemotherapy'] +
-                below['chemotherapy'])) /
-                self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (left['chemotherapy'] - 2 * cell['chemotherapy'] +
-                right['chemotherapy'])) /
-                self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-        )
-        self.work_grid['chemokine'][:1, 1:-1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (below['chemokine'] - 2 * cell['chemokine'] +
-              below['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (left['chemokine'] - 2 * cell['chemokine'] +
-              right['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] * cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
+        cell_has_bacteria = grid_contents[:1, 1:-1]
+        cell_has_non_resting_macrophage = grid_contents[:1, 1:-1] * -1
+        work_grid = self.work_grid[:1, 1:-1]
+        self.diffusion_3_neighbours(chemo, cell, [left, right], below, cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
 
         # LEFT
         cell = self.grid[1:-1, :1]
         above = self.grid[0:-2, :1]
         right = self.grid[1:-1, 1:2]
         below = self.grid[2:, :1]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][1:-1, :1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (right['oxygen'] - 2 * cell['oxygen'] + right['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (above['oxygen'] - 2 * cell['oxygen'] + below['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][1:-1, :1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (right['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         right['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (above['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         above['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-            )
-        self.work_grid['chemokine'][1:-1, :1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (right['chemokine'] - 2 * cell['chemokine'] +
-                                                              right['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (above['chemokine'] - 2 * cell['chemokine'] +
-                                                              below['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] *  cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
+        cell_has_bacteria = grid_contents[1:-1, :1]
+        cell_has_non_resting_macrophage = grid_contents[1:-1, :1] * -1
+        work_grid = self.work_grid[1:-1, :1]
+        self.diffusion_3_neighbours(chemo, cell, [above, below], right, cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+        
         # RIGHT
         cell = self.grid[1:-1, -1:]
         above = self.grid[0:-2, -1:]
         left = self.grid[1:-1, -2:-1]
         below = self.grid[2:, -1:]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][1:-1, -1:] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (left['oxygen'] - 2 * cell['oxygen'] + left['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (above['oxygen'] - 2 * cell['oxygen'] + below['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][1:-1, -1:] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (left['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         left['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (above['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         above['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-            )
-        self.work_grid['chemokine'][1:-1, -1:] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (left['chemokine'] - 2 * cell['chemokine'] +
-                                                              left['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (above['chemokine'] - 2 * cell['chemokine'] +
-                                                              below['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] *  cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
-
+        cell_has_bacteria = grid_contents[1:-1, -1:]
+        cell_has_non_resting_macrophage = grid_contents[1:-1, -1:] * -1
+        work_grid = self.work_grid[1:-1, -1:]
+        self.diffusion_3_neighbours(chemo, cell, [above, below], left, cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+        
         # BOTTOM ROW
         cell = self.grid[-1:, 1:-1]
         above = self.grid[-2:-1, 1:-1]
         left = self.grid[-1:, 0:-2]
         right = self.grid[-1:, 2:]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][-1:, 1:-1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (above['oxygen'] - 2 * cell['oxygen'] + above['oxygen'])) /
+        cell_has_bacteria = grid_contents[-1:, 1:-1]
+        cell_has_non_resting_macrophage = grid_contents[-1:, 1:-1] * -1
+        work_grid = self.work_grid[-1:, 1:-1]
+        self.diffusion_3_neighbours(chemo, cell, [left, right], above, cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+        
+        #CORNERS
+        # Top left
+        cell = self.grid[:1, :1]
+        below = self.grid[:1, 1:2]
+        right = self.grid[1:2, :1]
+        cell_has_bacteria = grid_contents[:1, :1]
+        cell_has_non_resting_macrophage = grid_contents[:1, :1] * -1
+        work_grid = self.work_grid[:1, :1]
+        self.diffusion_2_neighbours(chemo, cell, [below, right], cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+
+        # Top right
+        cell = self.grid[:1, -1:]
+        below = self.grid[1:2, -1:]
+        left = self.grid[:1, -2:-1]
+        cell_has_bacteria = grid_contents[:1, :1]
+        cell_has_non_resting_macrophage = grid_contents[:1, -1:] * -1
+        work_grid = self.work_grid[:1, -1:]
+        self.diffusion_2_neighbours(chemo, cell, [below, left], cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+
+        # Bottom left
+        cell = self.grid[-1:, :1]
+        above = self.grid[-2:-1, :1]
+        right = self.grid[-1:, 1:2]
+        cell_has_bacteria = grid_contents[-1:, :1]
+        cell_has_non_resting_macrophage = grid_contents[-1:, :1] * -1
+        work_grid = self.work_grid[-1:, :1]
+        self.diffusion_2_neighbours(chemo, cell, [above, right], cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+
+        # Bottom right
+        cell = self.grid[-1:, -1:]
+        above = self.grid[-2:-1, -1:]
+        left = self.grid[-1:, -2:-1]
+        cell_has_bacteria = grid_contents[-1:, -1:]
+        cell_has_non_resting_macrophage = grid_contents[-1:, -1:] * -1
+        work_grid = self.work_grid[-1:, -1:]
+        self.diffusion_2_neighbours(chemo, cell, [above, left], cell_has_bacteria,
+                                    cell_has_non_resting_macrophage, work_grid)
+
+        if not chemo:
+            self.work_grid['chemotherapy'] = np.zeros(self.grid.shape,dtype=float)
+
+    def diffusion_3_neighbours(self, chemo, cell, paired_neighbours, non_paired_neighbour, cell_has_bacteria,
+                               cell_has_non_resting_macrophage, work_grid):
+        """
+        For cells with 3 neighbours (4th would be off grid - i.e. top row, left column etc.) run diffusion rules
+        :param chemo: 
+        :param cell: 
+        :param paired_neighbours: 
+        :param non_paired_neighbour: 
+        :param cell_has_bacteria: 
+        :param cell_has_non_resting_macrophage: 
+        :param work_grid: 
+        :return: 
+        """
+        work_grid['oxygen'] = cell['oxygen'] + self.time_step * (
+            ((cell['oxygen_diffusion_rate'] * (non_paired_neighbour['oxygen'] - 2 * cell['oxygen'] + non_paired_neighbour['oxygen'])) /
              self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (left['oxygen'] - 2 * cell['oxygen'] + right['oxygen'])) /
+            ((cell['oxygen_diffusion_rate'] * (paired_neighbours[0]['oxygen'] - 2 * cell['oxygen'] + paired_neighbours[1]['oxygen'])) /
              self.model_parameters['spatial_step'] ** 2) +
             (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
             (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
              cell_has_bacteria)
         )
         if chemo:
-            self.work_grid['chemotherapy'][-1:, 1:-1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (above['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         above['chemotherapy'])) /
+            work_grid['chemotherapy'] = cell['chemotherapy'] + self.time_step * (
+                ((cell['chemotherapy_diffusion_rate'] * (non_paired_neighbour['chemotherapy'] - 2 * cell['chemotherapy'] +
+                                                         non_paired_neighbour['chemotherapy'])) /
                  self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (left['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         right['chemotherapy'])) /
+                ((cell['chemotherapy_diffusion_rate'] * (paired_neighbours[0]['chemotherapy'] - 2 * cell['chemotherapy'] +
+                                                         paired_neighbours[1]['chemotherapy'])) /
                  self.model_parameters['spatial_step'] ** 2) +
                 (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
                 (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
             )
-        self.work_grid['chemokine'][-1:, 1:-1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (above['chemokine'] - 2 * cell['chemokine'] +
-                                                              above['chemokine'])) /
+        work_grid['chemokine'] = cell['chemokine'] + self.time_step * (
+            ((self.model_parameters['chemokine_diffusion'] * (non_paired_neighbour['chemokine'] - 2 * cell['chemokine'] +
+                                                              non_paired_neighbour['chemokine'])) /
              self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (left['chemokine'] - 2 * cell['chemokine'] +
-                                                              right['chemokine'])) /
+            ((self.model_parameters['chemokine_diffusion'] * (paired_neighbours[0]['chemokine'] - 2 * cell['chemokine'] +
+                                                              paired_neighbours[1]['chemokine'])) /
              self.model_parameters['spatial_step'] ** 2) +
             self.model_parameters['chemokine_from_bacteria'] * cell_has_bacteria +
             self.model_parameters['chemokine_from_macrophage'] *
@@ -400,165 +379,56 @@ class TBAutomaton(Automaton):
             self.model_parameters['chemokine_decay'] * cell['chemokine']
         )
 
-        #CORNERS
-        # Top left
-        cell = self.grid[:1, :1]
-        below = self.grid[:1, 1:2]
-        right = self.grid[1:2, :1]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][:1, :1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (below['oxygen'] - 2 * cell['oxygen'] + below['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (right['oxygen'] - 2 * cell['oxygen'] + right['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][:1, 1:-1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (below['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         below['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (right['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         right['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-            )
-        self.work_grid['chemokine'][:1, 1:-1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (below['chemokine'] - 2 * cell['chemokine'] +
-                                                              below['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (right['chemokine'] - 2 * cell['chemokine'] +
-                                                              right['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] *  cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
-        # Top right
-        cell = self.grid[:1, -1:]
-        below = self.grid[1:2, -1:]
-        left = self.grid[:1, -2:-1]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][:1, :1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (below['oxygen'] - 2 * cell['oxygen'] + below['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (left['oxygen'] - 2 * cell['oxygen'] + left['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][:1, 1:-1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (below['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         below['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (left['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         left['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-            )
-        self.work_grid['chemokine'][:1, 1:-1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (below['chemokine'] - 2 * cell['chemokine'] +
-                                                              below['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (left['chemokine'] - 2 * cell['chemokine'] +
-                                                              left['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] *  cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
-        # Bottom left
-        cell = self.grid[-1:, :1]
-        above = self.grid[-2:-1, :1]
-        right = self.grid[-1:, 1:2]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][:1, :1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (above['oxygen'] - 2 * cell['oxygen'] + above['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (right['oxygen'] - 2 * cell['oxygen'] + right['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][:1, 1:-1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (above['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         above['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (right['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         right['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-            )
-        self.work_grid['chemokine'][:1, 1:-1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (above['chemokine'] - 2 * cell['chemokine'] +
-                                                              above['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (right['chemokine'] - 2 * cell['chemokine'] +
-                                                              right['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] *  cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
-        # Bottom right
-        cell = self.grid[-1:, -1:]
-        above = self.grid[-2:-1, -1:]
-        left = self.grid[-1:, -2:-1]
-        cell_has_bacteria = function_bac(cell)
-        cell_has_non_resting_macrophage = function_mac(cell['contents'])
-        self.work_grid['oxygen'][:1, :1] = cell['oxygen'] + self.time_step * (
-            ((cell['oxygen_diffusion_rate'] * (above['oxygen'] - 2 * cell['oxygen'] + above['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((cell['oxygen_diffusion_rate'] * (left['oxygen'] - 2 * cell['oxygen'] + left['oxygen'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
-            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
-             cell_has_bacteria)
-        )
-        if chemo:
-            self.work_grid['chemotherapy'][:1, 1:-1] = cell['chemotherapy'] + self.time_step * (
-                ((cell['chemotherapy_diffusion_rate'] * (above['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         above['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                ((cell['chemotherapy_diffusion_rate'] * (left['chemotherapy'] - 2 * cell['chemotherapy'] +
-                                                         left['chemotherapy'])) /
-                 self.model_parameters['spatial_step'] ** 2) +
-                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
-                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
-            )
-        self.work_grid['chemokine'][:1, 1:-1] = cell['chemokine'] + self.time_step * (
-            ((self.model_parameters['chemokine_diffusion'] * (above['chemokine'] - 2 * cell['chemokine'] +
-                                                              above['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            ((self.model_parameters['chemokine_diffusion'] * (left['chemokine'] - 2 * cell['chemokine'] +
-                                                              left['chemokine'])) /
-             self.model_parameters['spatial_step'] ** 2) +
-            self.model_parameters['chemokine_from_bacteria'] *  cell_has_bacteria +
-            self.model_parameters['chemokine_from_macrophage'] *
-            (cell_has_non_resting_macrophage) +
-            self.model_parameters['chemokine_decay'] * cell['chemokine']
-        )
+    def diffusion_2_neighbours(self, chemo, cell, neighbours, cell_has_bacteria,
+                               cell_has_non_resting_macrophage, work_grid):
+        """
+        For cells with 2 neighbours (other 2 would be off grid - i.e. corners) run diffusion rules
+        :param chemo:
+        :param cell:
+        :param neighbours:
+        :param cell_has_bacteria:
+        :param cell_has_non_resting_macrophage:
+        :param work_grid:
+        :return:
+        """
 
-        if not chemo:
-            self.work_grid['chemotherapy'] = np.zeros(self.grid.shape,dtype=float)
+        work_grid['oxygen'] = cell['oxygen'] + self.time_step * (
+            ((cell['oxygen_diffusion_rate'] * (neighbours[0]['oxygen'] - 2 * cell['oxygen'] + neighbours[0]['oxygen'])) /
+             self.model_parameters['spatial_step'] ** 2) +
+            ((cell['oxygen_diffusion_rate'] * (neighbours[1]['oxygen'] - 2 * cell['oxygen'] + neighbours[1]['oxygen'])) /
+             self.model_parameters['spatial_step'] ** 2) +
+            (self.model_parameters['oxygen_from_source'] * cell['blood_vessel']) +
+            (self.model_parameters['oxygen_uptake_from_bacteria'] * cell['oxygen'] *
+             cell_has_bacteria)
+        )
+        if chemo:
+            work_grid['chemotherapy'] = cell['chemotherapy'] + self.time_step * (
+                ((cell['chemotherapy_diffusion_rate'] * (neighbours[0]['chemotherapy'] - 2 * cell['chemotherapy'] +
+                                                         neighbours[0]['chemotherapy'])) /
+                 self.model_parameters['spatial_step'] ** 2) +
+                ((cell['chemotherapy_diffusion_rate'] * (neighbours[1]['chemotherapy'] - 2 * cell['chemotherapy'] +
+                                                         neighbours[1]['chemotherapy'])) /
+                 self.model_parameters['spatial_step'] ** 2) +
+                (self.model_parameters['chemotherapy_from_source'] * cell['blood_vessel']) +
+                (self.model_parameters['chemotherapy_decay'] * cell['chemotherapy'])
+            )
+        work_grid['chemokine'] = cell['chemokine'] + self.time_step * (
+            ((self.model_parameters['chemokine_diffusion'] * (neighbours[0]['chemokine'] - 2 * cell['chemokine'] +
+                                                              neighbours[0]['chemokine'])) /
+             self.model_parameters['spatial_step'] ** 2) +
+            ((self.model_parameters['chemokine_diffusion'] * (neighbours[1]['chemokine'] - 2 * cell['chemokine'] +
+                                                              neighbours[1]['chemokine'])) /
+             self.model_parameters['spatial_step'] ** 2) +
+            self.model_parameters['chemokine_from_bacteria'] * cell_has_bacteria +
+            self.model_parameters['chemokine_from_macrophage'] *
+            (cell_has_non_resting_macrophage) +
+            self.model_parameters['chemokine_decay'] * cell['chemokine']
+        )
 
     def update_agents(self):
         pass
+
+# ---------------------------------------- Agents -------------------------------------------------------
 
 
 class Bacterium(Agent):
@@ -575,6 +445,9 @@ class Bacterium(Agent):
         if self.resting:
             code += 0.5
         return code
+
+    def act(self):
+        
 
 
 class Caseum(Agent):
@@ -611,6 +484,13 @@ class Macrophage(Agent):
         elif self.state == 'chronically_infected':
             code += 3.0
         return code
+
+# ---------------------------------------- Events -------------------------------------------------------
+
+class BacteriumReplication(Event):
+
+    def __init__(self):
+        Event.__init__(self)
 
 
 # ---------------------------------------- Runner -------------------------------------------------------
@@ -756,8 +636,12 @@ if __name__ == '__main__':
 
     automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
                             blood_vessels, macrophages, fast_bacteria, slow_bacteria)
+    pr = cProfile.Profile()
 
+    pr.enable()
     automaton.run()
+    pr.disable()
+    pr.print_stats(sort='cumtime')
 
     whole_end_time = time.time()
     print "End:     {", whole_end_time, "}"
