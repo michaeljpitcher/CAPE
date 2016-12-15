@@ -388,6 +388,7 @@ class DiffusionTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], 0.0)
 
     def test_chemokine_resting_mac_diffusion(self):
+        # Resting mac so should be no change
         self.automaton.model_parameters['chemokine_diffusion'] = 0.0
         self.automaton.model_parameters['chemokine_from_macrophage'] = 1.0
         m = Macrophage('resting')
@@ -396,19 +397,12 @@ class DiffusionTestCase(unittest.TestCase):
 
         self.automaton.diffusion(True)
 
-        previous_chemo_at_source_cell = 10.0
-        expected_chemo_at_cell = (previous_chemo_at_source_cell) + self.time_params['time_step'] * (
-            + 0
-            + 0 + 0
-        )
-        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], expected_chemo_at_cell)
+        self.assertEqual(self.automaton.work_grid[(4, 4)]['chemokine'], 10.0)
         # Neighbours - check the neighbours get the chemokine
         self.assertEqual(self.automaton.work_grid[(3, 4)]['chemokine'], 0.0)
         self.assertEqual(self.automaton.work_grid[(4, 3)]['chemokine'], 0.0)
         self.assertEqual(self.automaton.work_grid[(4, 5)]['chemokine'], 0.0)
         self.assertEqual(self.automaton.work_grid[(5, 4)]['chemokine'], 0.0)
-
-
 
     # TODO need to check edges cases as well :(
 
