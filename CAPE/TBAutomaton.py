@@ -452,6 +452,7 @@ class TBAutomaton(Automaton):
         events = []
         events += self.bacteria_replication()
         events += self.t_cell_recruitment()
+        events += self.macrophage_recruitment()
         # events += self.chemotherapy_killing_bacteria()
         # events += self.chemotherapy_killing_macrophages()
         # events += self.t_cell_processes()
@@ -459,6 +460,9 @@ class TBAutomaton(Automaton):
         # events += self.macrophage_state_changes()
         # events += self.bacteria_state_changes()
         return events
+
+    def total_bacteria(self):
+        return len(self.bacteria) + sum([m.intracellular_bacteria for m in self.macrophages])
 
     def bacteria_replication(self):
         """
@@ -527,8 +531,7 @@ class TBAutomaton(Automaton):
         """
         t_cell_recruitment_events = []
         # When global amount of bacteria exceeds threshold
-        if len(self.bacteria) + len([m.intracellular_bacteria for m in self.macrophages]) >= \
-                self.model_parameters['bacteria_threshold_for_t_cells']:
+        if self.total_bacteria() >= self.model_parameters['bacteria_threshold_for_t_cells']:
             # Each blood vessel
             for blood_vessel_address in self.blood_vessel_addresses:
                 # Generate event if probability according to parameters
@@ -553,6 +556,38 @@ class TBAutomaton(Automaton):
                         new_event = RecruitTCell(blood_vessel_address, neighbour_address)
                         t_cell_recruitment_events.append(new_event)
         return t_cell_recruitment_events
+
+    def macrophage_recruitment(self):
+        """
+        Each step for each source vessel, there is a probability that macrophage will be recruited
+        :return:
+        """
+        if self.total_bacteria() >= self.model_parameters['bacteria_threshold_for_macrophage_recruitment']:
+            chemokine_threshold = self.model_parameters['chemokine_scale_for_macrophage_recruitment_above_threshold']
+        else:
+            chemokine_threshold = self.model_parameters['chemokine_scale_for_macrophage_recruitment_below_threshold']
+
+        # Loop through each blood vessel
+        for bv_address in self.blood_vessel_addresses:
+            # Generate event with probability based on parameters
+            r = np.random.randint(1, 101)
+            if r <= self.model_parameters['macrophage_recruitment_probability']:
+                # Get neighbours, then reduce to those that are free and have sufficient chemokine scale
+                neighbours = self.von_neumann_neighbours(bv_address, 1)
+                free_neighbours = []
+                for neighbour_address in neighbours:
+                    neighbour = self.grid[neighbour_address]
+                    if neighbour is not None and neighbour['blood_vessel'] == 0.0 and neighbour['contents'] == 0.0 and \
+                            self.chemokine_scale(neighbour_address) > chemokine_threshold:
+                        free_neighbours.append(neighbour_address)
+
+                if len(free_neighbours) > 0:
+                    # Pick one of the neighbours
+                    chosen_neighbour = free_neighbours[np.random.randint(len(free_neighbours))]
+                    # Create event
+                    new_event = RecruitMacrophage(bv_address, chosen_neighbour)
+                    self.potential_events.append(new_event)
+
 
 # ---------------------------------------- Agents -------------------------------------------------------
 
@@ -633,6 +668,13 @@ class RecruitTCell(Event):
         Event.__init__(self)
         self.blood_vessel_address = bv_address
         self.new_t_cell_address = new_t_cell_address
+
+
+class RecruitMacrophage(Event):
+    def __init__(self, bv_address, new_macrophage_address):
+        Event.__init__(self)
+        self.blood_vessel_address = bv_address
+        self.new_macrophage_address = new_macrophage_address
 
 # ---------------------------------------- Runner -------------------------------------------------------
 
