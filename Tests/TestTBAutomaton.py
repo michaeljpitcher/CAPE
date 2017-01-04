@@ -121,6 +121,57 @@ class TBAutomatonTestCase(unittest.TestCase):
                     self.assertEqual(cell['oxygen_diffusion_rate'], self.model_params['oxygen_diffusion'])
                     self.assertEqual(cell['chemotherapy_diffusion_rate'], self.model_params['chemotherapy_diffusion'])
 
+    def test_record_counts(self):
+        # BASE
+        self.automaton.record_counts()
+        # Increment all counts
+        self.automaton.time = 10.0
+        fast_bac = Bacterium((9,9), 'fast')
+        self.automaton.bacteria.append(fast_bac)
+        fast_bac_rest = Bacterium((8,9), 'fast')
+        fast_bac_rest.resting = True
+        self.automaton.bacteria.append(fast_bac_rest)
+        slow_bac = Bacterium((7,9), 'slow')
+        self.automaton.bacteria.append(slow_bac)
+        slow_bac_rest = Bacterium((6,9), 'slow')
+        slow_bac_rest.resting = True
+        self.automaton.bacteria.append(slow_bac_rest)
+        self.automaton.macrophages[0].intracellular_bacteria = 1
+        rest_mac = Macrophage((5,9), 'resting')
+        self.automaton.macrophages.append(rest_mac)
+        act_mac = Macrophage((4, 9), 'active')
+        self.automaton.macrophages.append(act_mac)
+        inf_mac = Macrophage((3, 9), 'infected')
+        self.automaton.macrophages.append(inf_mac)
+        chrinf_mac = Macrophage((2, 9), 'chronically_infected')
+        self.automaton.macrophages.append(chrinf_mac)
+        tcell = TCell((1,9))
+        self.automaton.tcells.append(tcell)
+        self.automaton.caseum_addresses.append((0,9))
+        self.automaton.record_counts()
+
+        self.automaton.close_files()
+        count_file = open(self.output_loc + '/counts.csv', 'rb')
+        reader = csv.reader(count_file, delimiter=',')
+        counter = 0
+        for row in reader:
+            if counter == 0:
+                self.assertSequenceEqual(row, ["timestep", "fast_bacteria", "fast_bacteria_resting", "slow_bacteria",
+                                               "slow_bacteria_resting", "intracellular_bac", "total_bacteria",
+                                               "resting_macrophages", "active_macrophages", "infected_macrophages",
+                                               "chron_infected_macrophages", "total_macrophages", "t_cells", "caseum"])
+            elif counter == 1:
+                self.assertSequenceEqual(row, ['0.0', str(len(self.fb)), '0', str(len(self.sb)), '0', '0',
+                                               str(len(self.fb) + len(self.sb)), str(len(self.macs)), '0', '0', '0',
+                                               str(len(self.macs)), '0', '0'])
+            elif counter == 2:
+                self.assertSequenceEqual(row, [str(10.0 * 0.1), str(len(self.fb) + 1), str(1), str(len(self.sb)+1), str(1), str(1),
+                                               str(len(self.fb) + len(self.sb) + 5), str(len(self.macs) + 1), str(1), str(1), str(1),
+                                               str(len(self.macs) + 4), str(1), str(1)])
+            counter += 1
+
+
+
 
 
 
