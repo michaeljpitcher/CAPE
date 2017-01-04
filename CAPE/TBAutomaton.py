@@ -445,10 +445,7 @@ class Bacterium(Agent):
         if self.resting:
             code += 0.5
         return code
-
-    def act(self):
         
-
 
 class Caseum(Agent):
 
@@ -614,8 +611,8 @@ if __name__ == '__main__':
     # LOAD PARAMETERS
     parameters = {}
     # Get all options in parameters section and add to the dictionary
-    for i in config.options("ParametersSection"):
-        parameters[i] = config.getfloat("ParametersSection", i)
+    for i in config.options("ModelParametersSection"):
+        parameters[i] = config.getfloat("ModelParametersSection", i)
 
     # TIME PARAMETERS
     time_parameters = {}
@@ -630,18 +627,22 @@ if __name__ == '__main__':
     output_location = config.get("RunParametersSection", "output_location")
     if not os.path.exists(output_location):
         os.makedirs(output_location)
+    profile = config.getboolean("RunParametersSection", "profile")
 
     # LOAD INITIALISATION
     blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise(config, total_shape)
 
     automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
                             blood_vessels, macrophages, fast_bacteria, slow_bacteria)
-    pr = cProfile.Profile()
 
-    pr.enable()
-    automaton.run()
-    pr.disable()
-    pr.print_stats(sort='cumtime')
+    if profile:
+        pr = cProfile.Profile()
+        pr.enable()
+        automaton.run()
+        pr.disable()
+        pr.print_stats(sort='cumtime')
+    else:
+        automaton.run()
 
     whole_end_time = time.time()
     print "End:     {", whole_end_time, "}"
