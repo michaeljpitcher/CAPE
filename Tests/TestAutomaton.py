@@ -88,7 +88,7 @@ class AutomatonTestCase(unittest.TestCase):
                 Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
                          record_values, record_grids, initialisation)
 
-            def update_agents(self):
+            def generate_events_from_agents(self):
                 pass
 
             def update_cells(self):

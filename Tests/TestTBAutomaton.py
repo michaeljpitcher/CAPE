@@ -87,7 +87,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.model_parameters['caseum_distance_to_reduce_diffusion'] = 1
         self.automaton.model_parameters['caseum_threshold_to_reduce_diffusion'] = 2
 
-        cas = Caseum()
+        cas = Caseum((4,1))
         self.automaton.grid[(4,1)]['contents'] = cas
         self.automaton.caseum_addresses.append((4,1))
 
@@ -104,7 +104,7 @@ class TBAutomatonTestCase(unittest.TestCase):
 
         self.automaton.model_parameters['diffusion_caseum_reduction'] = 2.0
 
-        cas = Caseum()
+        cas = Caseum((4,1))
         self.automaton.grid[(4,1)]['contents'] = cas
         self.automaton.caseum_addresses.append((4,1))
 
@@ -120,6 +120,9 @@ class TBAutomatonTestCase(unittest.TestCase):
                 else:
                     self.assertEqual(cell['oxygen_diffusion_rate'], self.model_params['oxygen_diffusion'])
                     self.assertEqual(cell['chemotherapy_diffusion_rate'], self.model_params['chemotherapy_diffusion'])
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

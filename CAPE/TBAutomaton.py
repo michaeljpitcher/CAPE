@@ -50,17 +50,17 @@ class TBAutomaton(Automaton):
             initialisation['oxygen'][bva] = model_parameters['blood_vessel_value'] * model_parameters['initial_oxygen']
         # Macrophages
         for ima in initial_macrophage_addresses:
-            mac = Macrophage('resting')
+            mac = Macrophage(ima, 'resting')
             initialisation['contents'][ima] = mac
             self.macrophages.append(mac)
         # Fast bacteria
         for ifba in initial_fast_bacteria_addresses:
-            fbac = Bacterium('fast')
+            fbac = Bacterium(ifba, 'fast')
             initialisation['contents'][ifba] = fbac
             self.bacteria.append(fbac)
         # Fast bacteria
         for isba in initial_slow_bacteria_addresses:
-            sbac = Bacterium('slow')
+            sbac = Bacterium(isba, 'slow')
             initialisation['contents'][isba] = sbac
             self.bacteria.append(sbac)
 
@@ -85,6 +85,11 @@ class TBAutomaton(Automaton):
         # Super class initialisation
         Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
                            self.values_to_record, self.grids_to_record, initialisation)
+
+        # Maxima
+        self.max_oxygen = 0.0
+        self.max_chemotherapy = 0.0
+        self.max_chemokine = 0.0
 
         # Chemotherapy scheduling
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
@@ -425,18 +430,86 @@ class TBAutomaton(Automaton):
             self.model_parameters['chemokine_decay'] * cell['chemokine']
         )
 
-    def update_agents(self):
-        pass
+    def generate_events_from_agents(self):
+        self.bacteria_replication()
+        # self.t_cell_recruitment()
+        # self.macrophage_recruitment()
+        # self.chemotherapy_killing_bacteria()
+        # self.chemotherapy_killing_macrophages()
+        # self.t_cell_processes()
+        # self.macrophage_processes()
+        # self.macrophage_state_changes()
+        # self.bacteria_state_changes()
+
+    def bacteria_replication(self):
+        """
+        Bacteria replicate (produce a new bacterium agent) once they reach a certain age.
+        :return:
+        """
+        # Loop through every bacteria, check age against a (stochastic) threshold, generate event if age is higher than
+        # threshold
+        for bacterium in self.bacteria:
+            # Increment age
+            bacterium.age += self.time_parameters['time_step']
+
+            # Skip if the bacterium is resting
+            if bacterium.resting:
+                continue
+
+            if bacterium.metabolism == 'fast':
+                maximum = self.model_parameters['bacteria_replication_fast_upper']
+                minimum = self.model_parameters['bacteria_replication_fast_lower']
+            else:  # Slow
+                maximum = self.model_parameters['bacteria_replication_slow_upper']
+                minimum = self.model_parameters['bacteria_replication_slow_lower']
+
+            replication_time = np.random.randint(minimum, maximum) / self.time_parameters['time_step']
+
+            # TODO - MED - Does this really work as a modulo?
+            # If the time is sufficient enough, bacteria can replicate
+            if self.time % replication_time == 0:
+
+                # Look for free neighbours
+                free_neighbours = []
+                # TODO - COMP - maybe 4 shouldn't be hard coded?
+                for depth in range(1, 4):
+                    # Pull the neighbours from the appropriate neighbourhood
+                    if bacterium.division_neighbourhood == 'mo':
+                        neighbours = self.moore_neighbours(bacterium.address, depth)
+                    else:
+                        neighbours = self.von_neumann_neighbours(bacterium.address, depth)
+                    # Find a free neighbour (not a blood vessel and contents == 0.0)
+                    for neighbour_address in neighbours:
+                        neighbour = self.grid[neighbour_address]
+                        if neighbour is not None and neighbour['contents'] == 0.0 and neighbour['blood_vessel'] == 0.0:
+                            free_neighbours.append(neighbour_address)
+                    # If a free neighbour found, don't look at greater depths
+                    if len(free_neighbours) > 0:
+                        break
+                # A free neighbour has not been found anywhere
+                if len(free_neighbours) == 0:
+                    # Bacterium will change to resting state (quorum sensing)
+                    new_event = BacteriumStateChange(bacterium.address, 'resting', True)
+                    self.potential_events.append(new_event)
+                else:  # Free space found
+                    # Pick a free neighbour at random
+                    neighbour_address = free_neighbours[np.random.randint(len(free_neighbours))]
+                    # Create event and add to list of potential events
+                    new_event = BacteriumReplication(bacterium.address, neighbour_address, bacterium.metabolism)
+                    self.potential_events.append(new_event)
+
+
 
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
 class Bacterium(Agent):
 
-    def __init__(self, metabolism):
-        Agent.__init__(self)
+    def __init__(self, address, metabolism):
+        Agent.__init__(self, address)
         self.metabolism = metabolism
         self.resting = False
+        self.division_neighbourhood = 'mo'
 
     def output_code(self):
         # 1.0 == Fast, 2.0 == slow
@@ -449,8 +522,8 @@ class Bacterium(Agent):
 
 class Caseum(Agent):
 
-    def __init__(self):
-        Agent.__init__(self)
+    def __init__(self, address):
+        Agent.__init__(self, address)
 
     def output_code(self):
         return 100.0
@@ -458,8 +531,8 @@ class Caseum(Agent):
 
 class TCell(Agent):
 
-    def __init__(self):
-        Agent.__init__(self)
+    def __init__(self, address):
+        Agent.__init__(self, address)
 
     def output_code(self):
         return 3.0
@@ -467,8 +540,8 @@ class TCell(Agent):
 
 class Macrophage(Agent):
 
-    def __init__(self, state):
-        Agent.__init__(self)
+    def __init__(self, address, state):
+        Agent.__init__(self, address)
         self.state = state
         self.intracellular_bacteria = 0
 
@@ -484,11 +557,27 @@ class Macrophage(Agent):
 
 # ---------------------------------------- Events -------------------------------------------------------
 
+
 class BacteriumReplication(Event):
-
-    def __init__(self):
+    def __init__(self, original_bac_address, new_bac_address, new_metabolism):
         Event.__init__(self)
+        self.original_bac_address = original_bac_address
+        self.new_bac_address = new_bac_address
+        self.new_metabolism = new_metabolism
 
+
+class BacteriumStateChange(Event):
+    def __init__(self, address, attribute, value):
+        Event.__init__(self)
+        self.bacterium_address = address
+        self.attribute = attribute
+        self.value = value
+
+
+class RecruitTCell(Event):
+    def __init__(self, address):
+        Event.__init__(self)
+        self.new_t_cell_address = address
 
 # ---------------------------------------- Runner -------------------------------------------------------
 

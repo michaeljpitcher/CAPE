@@ -111,7 +111,7 @@ class DiffusionTestCase(unittest.TestCase):
         self.automaton.model_parameters['oxygen_uptake_from_bacteria'] = 1.0
         # Turn off diffusion
         self.automaton.grid['oxygen_diffusion_rate'] = np.zeros(self.shape,dtype=float)
-        b = Bacterium('fast')
+        b = Bacterium((4,4), 'fast')
         self.automaton.grid[(4,4)]['contents'] = b
 
         self.automaton.diffusion(False)
@@ -369,7 +369,7 @@ class DiffusionTestCase(unittest.TestCase):
 
         self.automaton.model_parameters['chemokine_diffusion'] = 0.0
         self.automaton.model_parameters['chemokine_from_macrophage'] = 1.0
-        m = Macrophage('active')
+        m = Macrophage((4,4), 'active')
         self.automaton.grid[(4,4)]['contents'] = m
         self.automaton.grid[(4,4)]['chemokine'] = 10.0
 
@@ -391,7 +391,7 @@ class DiffusionTestCase(unittest.TestCase):
         # Resting mac so should be no change
         self.automaton.model_parameters['chemokine_diffusion'] = 0.0
         self.automaton.model_parameters['chemokine_from_macrophage'] = 1.0
-        m = Macrophage('resting')
+        m = Macrophage((4,4), 'resting')
         self.automaton.grid[(4, 4)]['contents'] = m
         self.automaton.grid[(4, 4)]['chemokine'] = 10.0
 

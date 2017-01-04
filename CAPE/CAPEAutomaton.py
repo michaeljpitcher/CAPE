@@ -130,11 +130,11 @@ class Automaton:
             self.acceptable_events = []
 
             # Run agent-based model update
-            self.update_agents()
+            self.generate_events_from_agents()
 
-            self.conflict_resolve_events()
-
-            self.perform_events()
+            # self.conflict_resolve_events()
+            #
+            # self.perform_events()
 
             # Swap grids
             self.grid, self.work_grid = self.work_grid, self.grid
@@ -164,7 +164,7 @@ class Automaton:
         """
         raise NotImplementedError
 
-    def update_agents(self):
+    def generate_events_from_agents(self):
         """
         Agent-based model update. Specific rules must be overriden by subclass
         :return:
@@ -262,10 +262,11 @@ class Automaton:
 
 
 class Agent:
-    def __init__(self):
+    def __init__(self, address):
         """
         An Autonamous actor within the system. Abstract - should be subclassed.
         """
+        self.address = address
         self.age = 0.0
 
     def output_code(self):
