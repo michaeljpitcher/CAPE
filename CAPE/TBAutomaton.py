@@ -451,7 +451,7 @@ class TBAutomaton(Automaton):
     def generate_events_from_agents(self):
         events = []
         events += self.bacteria_replication()
-        # events += self.immune_recruitment()
+        events += self.t_cell_recruitment()
         # events += self.chemotherapy_killing_bacteria()
         # events += self.chemotherapy_killing_macrophages()
         # events += self.t_cell_processes()
@@ -518,7 +518,41 @@ class TBAutomaton(Automaton):
                     new_event = BacteriumReplication(bacterium.address, neighbour_address, bacterium.metabolism)
                     replication_events.append(new_event)
         return replication_events
-    
+
+    def t_cell_recruitment(self):
+        """
+        Once bacteria over entire system reach a threshold, t-cells enter the system. Creates an event to add a t-cell
+        to a cell next to a blood vessel
+        :return:
+        """
+        t_cell_recruitment_events = []
+        # When global amount of bacteria exceeds threshold
+        if len(self.bacteria) + len([m.intracellular_bacteria for m in self.macrophages]) >= \
+                self.model_parameters['bacteria_threshold_for_t_cells']:
+            # Each blood vessel
+            for blood_vessel_address in self.blood_vessel_addresses:
+                # Generate event if probability according to parameters
+                r = np.random.randint(1, 101)
+                if r <= self.model_parameters['t_cell_recruitment_probability']:
+                    # Get von Neumann neighbours
+                    neighbours = self.von_neumann_neighbours(blood_vessel_address,1)
+                    # Loop through all neighbours to find suitable options
+                    free_neighbours = []
+                    for neighbour_address in neighbours:
+                        neighbour = self.grid[neighbour_address]
+                        # Check neighbour is on the grid, is empty and has a sufficiently high chemokine level
+                        if neighbour is not None and neighbour['blood_vessel'] == 0.0 and neighbour['contents'] == 0.0 \
+                                and self.chemokine_scale(neighbour_address) > \
+                                self.model_parameters['chemokine_scale_for_t_cell_recruitment']:
+                            free_neighbours.append(neighbour_address)
+                    # Check there is at least one suitable neighbour
+                    if len(free_neighbours) > 0:
+                        # Pick one of the neighbours
+                        neighbour_address = free_neighbours[np.random.randint(len(free_neighbours))]
+                        # Create event
+                        new_event = RecruitTCell(blood_vessel_address, neighbour_address)
+                        t_cell_recruitment_events.append(new_event)
+        return t_cell_recruitment_events
 
 # ---------------------------------------- Agents -------------------------------------------------------
 
@@ -595,9 +629,10 @@ class BacteriumStateChange(Event):
 
 
 class RecruitTCell(Event):
-    def __init__(self, address):
+    def __init__(self, bv_address, new_t_cell_address):
         Event.__init__(self)
-        self.new_t_cell_address = address
+        self.blood_vessel_address = bv_address
+        self.new_t_cell_address = new_t_cell_address
 
 # ---------------------------------------- Runner -------------------------------------------------------
 

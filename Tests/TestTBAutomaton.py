@@ -22,8 +22,11 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['bacteria_replication_fast_lower'] = 9.0
         self.model_params['bacteria_replication_slow_upper'] = 20.0
         self.model_params['bacteria_replication_slow_lower'] = 19.0
+        self.model_params['bacteria_threshold_for_t_cells'] = 100
+        self.model_params['t_cell_recruitment_probability'] = 0
+        self.model_params['chemokine_scale_for_t_cell_recruitment'] = 1.1
 
-        self.bv = [(1, 1), (2, 2), (3, 3)]
+        self.bv = [(1, 1), (2, 3), (3, 5)]
         self.macs = [(9, 9), (8, 8), (7, 7)]
         self.fb = [(8, 1), (8, 2), (8, 3)]
         self.sb = [(1, 7), (2, 7)]
@@ -224,9 +227,9 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.max_oxygen = 0.0
         self.automaton.max_chemotherapy = 0.0
         self.automaton.max_chemokine = 0.0
-        self.assertEqual(self.automaton.oxygen_scale((0,0)), 0.0)
-        self.assertEqual(self.automaton.chemotherapy_scale((0,0)), 0.0)
-        self.assertEqual(self.automaton.chemokine_scale((0,0)), 0.0)
+        self.assertEqual(self.automaton.oxygen_scale((0, 0)), 0.0)
+        self.assertEqual(self.automaton.chemotherapy_scale((0, 0)), 0.0)
+        self.assertEqual(self.automaton.chemokine_scale((0, 0)), 0.0)
 
         self.automaton.max_oxygen = 100.0
         self.automaton.max_chemotherapy = 75.0
@@ -239,6 +242,42 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.oxygen_scale((0, 0)), 0.56)
         self.assertAlmostEqual(self.automaton.chemotherapy_scale((4, 7)), 0.48)
         self.assertEqual(self.automaton.chemokine_scale((8, 8)), 0.025)
+
+    def test_t_cell_recruitment_positive(self):
+        self.automaton.model_parameters['bacteria_threshold_for_t_cells'] = 0
+        self.automaton.model_parameters['t_cell_recruitment_probability'] = 100
+        self.automaton.model_parameters['chemokine_scale_for_t_cell_recruitment'] = -0.1
+
+        events = self.automaton.t_cell_recruitment()
+        self.assertEqual(len(events), 3)
+
+        self.automaton.model_parameters['bacteria_threshold_for_t_cells'] = 2
+        self.automaton.model_parameters['t_cell_recruitment_probability'] = 100
+        self.automaton.model_parameters['chemokine_scale_for_t_cell_recruitment'] = -0.1
+
+        events = self.automaton.t_cell_recruitment()
+        self.assertEqual(len(events), 3)
+
+        self.automaton.model_parameters['bacteria_threshold_for_t_cells'] = 0
+        self.automaton.model_parameters['t_cell_recruitment_probability'] = 100
+        self.automaton.model_parameters['chemokine_scale_for_t_cell_recruitment'] = 0.5
+
+        self.automaton.max_chemokine = 100.0
+        self.automaton.grid[(0, 1)]['chemokine'] = 66.0
+        self.automaton.grid[(1, 3)]['chemokine'] = 66.0
+        self.automaton.grid[(4, 5)]['chemokine'] = 66.0
+
+        events = self.automaton.t_cell_recruitment()
+        self.assertEqual(len(events), 3)
+
+        bv_addresses = [(e.blood_vessel_address, e.new_t_cell_address) for e in events]
+        self.assertItemsEqual(bv_addresses, [((1,1),(0,1)), ((2,3),(1,3)), ((3,5), (4,5))])
+
+    def test_t_cell_recruit_negative(self):
+        events = self.automaton.t_cell_recruitment()
+        self.assertEqual(len(events), 0)
+
+
 
 
 if __name__ == '__main__':
