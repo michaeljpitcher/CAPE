@@ -95,6 +95,24 @@ class TBAutomaton(Automaton):
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
                                                        self.model_parameters['chemotherapy_schedule1_start_upper'])
 
+    def oxygen_scale(self, address):
+        if self.max_oxygen == 0.0:
+            return 0.0
+        else:
+            return self.grid[address]['oxygen'] / self.max_oxygen
+
+    def chemotherapy_scale(self, address):
+        if self.max_chemotherapy == 0.0:
+            return 0.0
+        else:
+            return self.grid[address]['chemotherapy'] / self.max_chemotherapy
+        
+    def chemokine_scale(self, address):
+        if self.max_chemokine == 0.0:
+            return 0.0
+        else:
+            return self.grid[address]['chemokine'] / self.max_chemokine
+
     def timestep_output(self):
         """
         Output to console at each timestep
@@ -433,8 +451,7 @@ class TBAutomaton(Automaton):
     def generate_events_from_agents(self):
         events = []
         events += self.bacteria_replication()
-        # events += self.t_cell_recruitment()
-        # events += self.macrophage_recruitment()
+        # events += self.immune_recruitment()
         # events += self.chemotherapy_killing_bacteria()
         # events += self.chemotherapy_killing_macrophages()
         # events += self.t_cell_processes()
@@ -501,8 +518,7 @@ class TBAutomaton(Automaton):
                     new_event = BacteriumReplication(bacterium.address, neighbour_address, bacterium.metabolism)
                     replication_events.append(new_event)
         return replication_events
-
-
+    
 
 # ---------------------------------------- Agents -------------------------------------------------------
 

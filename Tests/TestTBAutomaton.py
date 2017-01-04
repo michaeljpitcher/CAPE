@@ -220,6 +220,26 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertEqual(events[0].attribute, 'resting')
         self.assertEqual(events[0].value, True)
 
+    def test_scales(self):
+        self.automaton.max_oxygen = 0.0
+        self.automaton.max_chemotherapy = 0.0
+        self.automaton.max_chemokine = 0.0
+        self.assertEqual(self.automaton.oxygen_scale((0,0)), 0.0)
+        self.assertEqual(self.automaton.chemotherapy_scale((0,0)), 0.0)
+        self.assertEqual(self.automaton.chemokine_scale((0,0)), 0.0)
+
+        self.automaton.max_oxygen = 100.0
+        self.automaton.max_chemotherapy = 75.0
+        self.automaton.max_chemokine = 40.0
+
+        self.automaton.grid[(0, 0)]['oxygen'] = 56.0
+        self.automaton.grid[(4, 7)]['chemotherapy'] = 36.0
+        self.automaton.grid[(8, 8)]['chemokine'] = 1.0
+
+        self.assertEqual(self.automaton.oxygen_scale((0, 0)), 0.56)
+        self.assertAlmostEqual(self.automaton.chemotherapy_scale((4, 7)), 0.48)
+        self.assertEqual(self.automaton.chemokine_scale((8, 8)), 0.025)
+
 
 if __name__ == '__main__':
     unittest.main()
