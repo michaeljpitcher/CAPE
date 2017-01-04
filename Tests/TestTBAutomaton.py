@@ -277,7 +277,14 @@ class TBAutomatonTestCase(unittest.TestCase):
         events = self.automaton.t_cell_recruitment()
         self.assertEqual(len(events), 0)
 
-
+    def test_total_bacteria(self):
+        # 5 initial
+        self.assertEqual(self.automaton.total_bacteria(), len(self.fb) + len(self.sb))
+        # Add intracellular
+        self.automaton.macrophages[0].intracellular_bacteria = 3
+        self.automaton.macrophages[1].intracellular_bacteria = 2
+        self.automaton.macrophages[2].intracellular_bacteria = 1
+        self.assertEqual(self.automaton.total_bacteria(), len(self.fb) + len(self.sb) + 6)
 
 
 if __name__ == '__main__':
