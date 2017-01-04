@@ -28,6 +28,10 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 100
         self.model_params['chemokine_scale_for_macrophage_recruitment_below_threshold'] = 1.01
         self.model_params['macrophage_recruitment_probability'] = 0.0
+        self.model_params['chemotherapy_scale_for_kill_fast_bacteria'] = 1.01
+        self.model_params['chemotherapy_scale_for_kill_slow_bacteria'] = 1.01
+
+
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
         self.macs = [(9, 9), (8, 8), (7, 7)]
@@ -323,7 +327,7 @@ class TBAutomatonTestCase(unittest.TestCase):
                 chemokine = np.random.randint(0,100)
                 self.automaton.grid[(x,y)]['chemokine'] = chemokine
                 self.automaton.max_chemokine = max(self.automaton.max_chemokine, chemokine)
-        
+
         self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 100
         self.model_params['chemokine_scale_for_macrophage_recruitment_below_threshold'] = 1.1
         self.model_params['macrophage_recruitment_probability'] = 100.0
@@ -335,6 +339,47 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['macrophage_recruitment_probability'] = 0.0
         events = self.automaton.macrophage_recruitment()
         self.assertEqual(len(events), 0)
+
+    def test_chemo_kill_bacteria(self):
+        # FAST
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_fast_bacteria'] = 0.5
+        self.automaton.max_chemotherapy = 100.0
+        bac_to_kill = self.fb[0]
+        self.automaton.grid[bac_to_kill]['chemotherapy'] = 77.0
+        bacs_to_save = self.fb[1:]
+        for a in bacs_to_save:
+            self.automaton.grid[a]['chemotherapy'] = 1.0
+        events = self.automaton.chemotherapy_killing_bacteria()
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].bacterium_address, bac_to_kill)
+
+        # SLOW
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_fast_bacteria'] = 1.01
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_slow_bacteria'] = 0.5
+        self.automaton.max_chemotherapy = 100.0
+        bac_to_kill = self.sb[0]
+        self.automaton.grid[bac_to_kill]['chemotherapy'] = 77.0
+        bacs_to_save = self.sb[1:]
+        for a in bacs_to_save:
+            self.automaton.grid[a]['chemotherapy'] = 1.0
+        events = self.automaton.chemotherapy_killing_bacteria()
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].bacterium_address, bac_to_kill)
+
+    def test_chemo_kill_bacteria_negative(self):
+        # FAST
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_fast_bacteria'] = 0.5
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_slow_bacteria'] = 0.5
+        self.automaton.max_chemotherapy = 100.0
+        bacs_to_save = self.fb
+        for a in bacs_to_save:
+            self.automaton.grid[a]['chemotherapy'] = 1.0
+        bacs_to_save = self.sb
+        for a in bacs_to_save:
+            self.automaton.grid[a]['chemotherapy'] = 1.0
+        events = self.automaton.chemotherapy_killing_bacteria()
+        self.assertEqual(len(events), 0)
+
 
 
 if __name__ == '__main__':

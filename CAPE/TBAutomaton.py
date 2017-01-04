@@ -590,6 +590,25 @@ class TBAutomaton(Automaton):
                     recruitment_events.append(new_event)
         return recruitment_events
 
+    def chemotherapy_killing_bacteria(self):
+        """
+        Chemotherapy destroys bacterium if the level is high enough
+        :return:
+        """
+        chemo_kill_bac_events = []
+        # Loop through all bacteria
+        for bacterium in self.bacteria:
+            # Check chemotherapy scale against relevant parameter based on metabolism
+            chemo_scale = self.chemotherapy_scale(bacterium.address)
+            if (bacterium.metabolism == 'fast' and chemo_scale >
+                    self.model_parameters['chemotherapy_scale_for_kill_fast_bacteria']) \
+                    or (bacterium.metabolism == 'slow' and chemo_scale >
+                    self.model_parameters['chemotherapy_scale_for_kill_slow_bacteria']):
+                # Scale is high enough, so create event to destroy bacterium
+                new_event = ChemoKillBacterium(bacterium.address)
+                chemo_kill_bac_events.append(new_event)
+        return chemo_kill_bac_events
+
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
@@ -676,6 +695,12 @@ class RecruitMacrophage(Event):
         Event.__init__(self)
         self.blood_vessel_address = bv_address
         self.new_macrophage_address = new_macrophage_address
+
+
+class ChemoKillBacterium(Event):
+    def __init__(self, bac_address):
+        Event.__init__(self)
+        self.bacterium_address = bac_address
 
 # ---------------------------------------- Runner -------------------------------------------------------
 
