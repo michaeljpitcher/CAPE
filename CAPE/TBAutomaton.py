@@ -116,7 +116,7 @@ class TBAutomaton(Automaton):
         rest_mac_count = len([m for m in self.macrophages if m.state == 'resting'])
         active_mac_count = len([m for m in self.macrophages if m.state == 'active'])
         inf_mac_count = len([m for m in self.macrophages if m.state == 'infected'])
-        chr_inf_mac_count = len([m for m in self.macrophages if m.state == 'chr_inf'])
+        chr_inf_mac_count = len([m for m in self.macrophages if m.state == 'chronically_infected'])
         total_mac_count = rest_mac_count + active_mac_count + inf_mac_count + chr_inf_mac_count
         t_cell_count = len(self.tcells)
         caseum_count = len(self.caseum_addresses)
