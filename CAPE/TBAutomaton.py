@@ -431,21 +431,24 @@ class TBAutomaton(Automaton):
         )
 
     def generate_events_from_agents(self):
-        self.bacteria_replication()
-        # self.t_cell_recruitment()
-        # self.macrophage_recruitment()
-        # self.chemotherapy_killing_bacteria()
-        # self.chemotherapy_killing_macrophages()
-        # self.t_cell_processes()
-        # self.macrophage_processes()
-        # self.macrophage_state_changes()
-        # self.bacteria_state_changes()
+        events = []
+        events += self.bacteria_replication()
+        # events += self.t_cell_recruitment()
+        # events += self.macrophage_recruitment()
+        # events += self.chemotherapy_killing_bacteria()
+        # events += self.chemotherapy_killing_macrophages()
+        # events += self.t_cell_processes()
+        # events += self.macrophage_processes()
+        # events += self.macrophage_state_changes()
+        # events += self.bacteria_state_changes()
+        return events
 
     def bacteria_replication(self):
         """
         Bacteria replicate (produce a new bacterium agent) once they reach a certain age.
         :return:
         """
+        replication_events = []
         # Loop through every bacteria, check age against a (stochastic) threshold, generate event if age is higher than
         # threshold
         for bacterium in self.bacteria:
@@ -490,13 +493,14 @@ class TBAutomaton(Automaton):
                 if len(free_neighbours) == 0:
                     # Bacterium will change to resting state (quorum sensing)
                     new_event = BacteriumStateChange(bacterium.address, 'resting', True)
-                    self.potential_events.append(new_event)
+                    replication_events.append(new_event)
                 else:  # Free space found
                     # Pick a free neighbour at random
                     neighbour_address = free_neighbours[np.random.randint(len(free_neighbours))]
                     # Create event and add to list of potential events
                     new_event = BacteriumReplication(bacterium.address, neighbour_address, bacterium.metabolism)
-                    self.potential_events.append(new_event)
+                    replication_events.append(new_event)
+        return replication_events
 
 
 

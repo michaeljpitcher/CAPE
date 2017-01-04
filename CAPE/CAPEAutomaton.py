@@ -130,7 +130,8 @@ class Automaton:
             self.acceptable_events = []
 
             # Run agent-based model update
-            self.generate_events_from_agents()
+            new_events = self.generate_events_from_agents()
+            self.potential_events += new_events
 
             # self.conflict_resolve_events()
             #
