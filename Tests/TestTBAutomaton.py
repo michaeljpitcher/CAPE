@@ -25,6 +25,9 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['bacteria_threshold_for_t_cells'] = 100
         self.model_params['t_cell_recruitment_probability'] = 0
         self.model_params['chemokine_scale_for_t_cell_recruitment'] = 1.1
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 100
+        self.model_params['chemokine_scale_for_macrophage_recruitment_below_threshold'] = 1.01
+        self.model_params['macrophage_recruitment_probability'] = 0.0
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
         self.macs = [(9, 9), (8, 8), (7, 7)]
@@ -285,6 +288,53 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.macrophages[1].intracellular_bacteria = 2
         self.automaton.macrophages[2].intracellular_bacteria = 1
         self.assertEqual(self.automaton.total_bacteria(), len(self.fb) + len(self.sb) + 6)
+
+    def test_macrophage_recruitment_positive_below_threshold(self):
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 100
+        self.model_params['chemokine_scale_for_macrophage_recruitment_below_threshold'] = -0.1
+        self.model_params['macrophage_recruitment_probability'] = 100.0
+        events = self.automaton.macrophage_recruitment()
+        self.assertEqual(len(events), len(self.bv))
+
+    def test_macrophage_recruitment_positive_above_threshold(self):
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 0
+        self.model_params['chemokine_scale_for_macrophage_recruitment_above_threshold'] = -0.1
+        self.model_params['macrophage_recruitment_probability'] = 100.0
+        events = self.automaton.macrophage_recruitment()
+        self.assertEqual(len(events), len(self.bv))
+
+    def test_macrophage_recruitment_negative_prob(self):
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 100
+        self.model_params['chemokine_scale_for_macrophage_recruitment_below_threshold'] = -0.1
+        self.model_params['macrophage_recruitment_probability'] = 0.0
+        events = self.automaton.macrophage_recruitment()
+        self.assertEqual(len(events), 0)
+
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 0
+        self.model_params['chemokine_scale_for_macrophage_recruitment_above_threshold'] = -0.1
+        self.model_params['macrophage_recruitment_probability'] = 0.0
+        events = self.automaton.macrophage_recruitment()
+        self.assertEqual(len(events), 0)
+
+    def test_macrophage_recruitment_negative_scale(self):
+
+        for x in range(self.shape[0]):
+            for y in range(self.shape[1]):
+                chemokine = np.random.randint(0,100)
+                self.automaton.grid[(x,y)]['chemokine'] = chemokine
+                self.automaton.max_chemokine = max(self.automaton.max_chemokine, chemokine)
+        
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 100
+        self.model_params['chemokine_scale_for_macrophage_recruitment_below_threshold'] = 1.1
+        self.model_params['macrophage_recruitment_probability'] = 100.0
+        events = self.automaton.macrophage_recruitment()
+        self.assertEqual(len(events), 0)
+
+        self.model_params['bacteria_threshold_for_macrophage_recruitment'] = 0
+        self.model_params['chemokine_scale_for_macrophage_recruitment_above_threshold'] = 1.1
+        self.model_params['macrophage_recruitment_probability'] = 0.0
+        events = self.automaton.macrophage_recruitment()
+        self.assertEqual(len(events), 0)
 
 
 if __name__ == '__main__':

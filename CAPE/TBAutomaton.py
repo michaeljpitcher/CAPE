@@ -562,6 +562,7 @@ class TBAutomaton(Automaton):
         Each step for each source vessel, there is a probability that macrophage will be recruited
         :return:
         """
+        recruitment_events = []
         if self.total_bacteria() >= self.model_parameters['bacteria_threshold_for_macrophage_recruitment']:
             chemokine_threshold = self.model_parameters['chemokine_scale_for_macrophage_recruitment_above_threshold']
         else:
@@ -586,8 +587,8 @@ class TBAutomaton(Automaton):
                     chosen_neighbour = free_neighbours[np.random.randint(len(free_neighbours))]
                     # Create event
                     new_event = RecruitMacrophage(bv_address, chosen_neighbour)
-                    self.potential_events.append(new_event)
-
+                    recruitment_events.append(new_event)
+        return recruitment_events
 
 # ---------------------------------------- Agents -------------------------------------------------------
 
