@@ -18,11 +18,15 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['initial_oxygen'] = 1.0
         self.model_params['oxygen_diffusion'] = 1.0
         self.model_params['chemotherapy_diffusion'] = 1.0
+        self.model_params['bacteria_replication_fast_upper'] = 10.0
+        self.model_params['bacteria_replication_fast_lower'] = 9.0
+        self.model_params['bacteria_replication_slow_upper'] = 20.0
+        self.model_params['bacteria_replication_slow_lower'] = 19.0
 
         self.bv = [(1, 1), (2, 2), (3, 3)]
         self.macs = [(9, 9), (8, 8), (7, 7)]
         self.fb = [(8, 1), (8, 2), (8, 3)]
-        self.sb = [(1, 7), (2, 7), (3, 7)]
+        self.sb = [(1, 7), (2, 7)]
 
         self.output_loc = 'test_output'
         if not os.path.exists(self.output_loc):
@@ -170,9 +174,51 @@ class TBAutomatonTestCase(unittest.TestCase):
                                                str(len(self.macs) + 4), str(1), str(1)])
             counter += 1
 
+    def test_bacterium_replicate_fast_not_slow(self):
+        self.automaton.time = 50.0
+        self.automaton.model_parameters['bacteria_replication_fast_upper'] = 6.0
+        self.automaton.model_parameters['bacteria_replication_fast_lower'] = 5.0
+        self.automaton.model_parameters['bacteria_replication_slow_upper'] = 100.0
+        self.automaton.model_parameters['bacteria_replication_slow_lower'] = 99.0
+        events = self.automaton.bacteria_replication()
+        self.assertEqual(len(events), len(self.fb))
+        for event in events:
+            self.assertTrue(isinstance(event, BacteriumReplication))
+            self.assertTrue(event.original_bac_address in self.fb)
+            self.assertEqual(self.automaton.grid[event.new_bac_address]['contents'], 0.0)
+            self.assertEqual(event.new_metabolism, 'fast')
 
+    def test_bacterium_replicate_slow_not_fast(self):
+        self.automaton.time = 50.0
+        self.automaton.model_parameters['bacteria_replication_fast_upper'] = 3.0
+        self.automaton.model_parameters['bacteria_replication_fast_lower'] = 2.0
+        self.automaton.model_parameters['bacteria_replication_slow_upper'] = 6.0
+        self.automaton.model_parameters['bacteria_replication_slow_lower'] = 5.0
+        events = self.automaton.bacteria_replication()
+        self.assertEqual(len(events), len(self.sb))
+        for event in events:
+            self.assertTrue(isinstance(event, BacteriumReplication))
+            self.assertTrue(event.original_bac_address in self.sb)
+            self.assertEqual(self.automaton.grid[event.new_bac_address]['contents'], 0.0)
+            self.assertEqual(event.new_metabolism, 'slow')
 
+    def test_replicate_no_room(self):
+        self.automaton.bacteria = []
+        bac = Bacterium((1,1), 'fast')
+        self.automaton.bacteria.append(bac)
 
+        for x in range(self.shape[0]):
+            for y in range(self.shape[1]):
+                if x == 1 and y == 1:
+                    self.automaton.grid[(x, y)]['contents'] = bac
+                else:
+                    self.automaton.grid[(x, y)]['contents'] = Caseum((x, y))
+
+        events = self.automaton.bacteria_replication()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], BacteriumStateChange))
+        self.assertEqual(events[0].attribute, 'resting')
+        self.assertEqual(events[0].value, True)
 
 
 if __name__ == '__main__':
