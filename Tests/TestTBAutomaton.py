@@ -86,7 +86,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.chemo_schedule1_start, 1.0)
         self.assertEqual(len(self.automaton.agents), len(self.macs) + len(self.fb) + len(self.sb))
         self.assertItemsEqual(self.automaton.blood_vessel_addresses, self.bv)
-        self.assertEqual(len(self.automaton.tcells), 0.0)
+        self.assertEqual(len(self.automaton.t_cells), 0.0)
         self.assertEqual(len(self.automaton.caseum_addresses), 0.0)
 
     def test_diffusion_pre_process_no_caseum(self):
@@ -160,7 +160,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         chrinf_mac = Macrophage((2, 9), 'chronically_infected')
         self.automaton.macrophages.append(chrinf_mac)
         tcell = TCell((1,9))
-        self.automaton.tcells.append(tcell)
+        self.automaton.t_cells.append(tcell)
         self.automaton.caseum_addresses.append((0,9))
         self.automaton.record_counts()
 
@@ -428,6 +428,8 @@ class TBAutomatonTestCase(unittest.TestCase):
 
         events = self.automaton.chemotherapy_killing_macrophages()
         self.assertEqual(len(events), 0)
+
+
 
 
 

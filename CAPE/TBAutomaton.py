@@ -31,7 +31,7 @@ class TBAutomaton(Automaton):
         self.blood_vessel_addresses = blood_vessel_addresses
         self.macrophages = []
         self.bacteria = []
-        self.tcells = []
+        self.t_cells = []
         self.caseum_addresses = []
 
         # INITIALISE
@@ -136,7 +136,7 @@ class TBAutomaton(Automaton):
         inf_mac_count = len([m for m in self.macrophages if m.state == 'infected'])
         chr_inf_mac_count = len([m for m in self.macrophages if m.state == 'chronically_infected'])
         total_mac_count = rest_mac_count + active_mac_count + inf_mac_count + chr_inf_mac_count
-        t_cell_count = len(self.tcells)
+        t_cell_count = len(self.t_cells)
         caseum_count = len(self.caseum_addresses)
 
         row = [self.time * self.time_step, fast_bac_count, fast_bac_rest_count, slow_bac_count, slow_bac_rest_count,
@@ -464,6 +464,29 @@ class TBAutomaton(Automaton):
     def total_bacteria(self):
         return len(self.bacteria) + sum([m.intracellular_bacteria for m in self.macrophages])
 
+    def find_max_chemokine_neighbour(self, neighbours):
+        """
+        Given neighbour addresses, find the neighbour which has the highest level of chemokine
+        :param neighbours:
+        :return:
+        """
+        max_chemokine_scale = 0
+        highest_indices = []
+        for index in range(len(neighbours)):
+            if self.grid[neighbours[index]] is not None:
+                chemokine_scale = self.chemokine_scale(neighbours[index])
+                if chemokine_scale > max_chemokine_scale:
+                    max_chemokine_scale = chemokine_scale
+                    highest_indices = [index]
+                elif chemokine_scale == max_chemokine_scale:
+                    highest_indices.append(index)
+
+        # Tie-breaking. If just one pick it, else pick any one index at random
+        choice = np.random.randint(0, len(highest_indices))
+        chosen_index = highest_indices[choice]
+
+        return chosen_index, max_chemokine_scale
+
     def bacteria_replication(self):
         """
         Bacteria replicate (produce a new bacterium agent) once they reach a certain age.
@@ -474,7 +497,7 @@ class TBAutomaton(Automaton):
         # threshold
         for bacterium in self.bacteria:
             # Increment age
-            bacterium.age += self.time_parameters['time_step']
+            bacterium.age += self.time_step
 
             # Skip if the bacterium is resting
             if bacterium.resting:
@@ -487,7 +510,7 @@ class TBAutomaton(Automaton):
                 maximum = self.model_parameters['bacteria_replication_slow_upper']
                 minimum = self.model_parameters['bacteria_replication_slow_lower']
 
-            replication_time = np.random.randint(minimum, maximum) / self.time_parameters['time_step']
+            replication_time = np.random.randint(minimum, maximum) / self.time_step
 
             # TODO - MED - Does this really work as a modulo?
             # If the time is sufficient enough, bacteria can replicate
@@ -622,6 +645,61 @@ class TBAutomaton(Automaton):
                 chemo_kill_mac_events.append(new_event)
         return chemo_kill_mac_events
 
+    def t_cell_processes(self):
+        """
+        T-cells movement, death and apoptosis of other agents
+        :return:
+        """
+        # T-cells only move after set period of time
+        if self.time % self.model_parameters['t_cell_movement_time'] == 0:
+
+            # Loop through all T-cells
+            for t_cell in self.t_cells:
+                # Increment age
+                t_cell.age += self.time_step
+                # Stochastic age threshold
+                age_threshold = np.random.randint(0, self.model_parameters['t_cell_age_threshold'])
+                # T-CELL DEATH
+                # If age > threshold, t-cell dies
+                if t_cell.age >= age_threshold:
+                    new_event = TCellDeath(t_cell.address)
+                    self.potential_events.append(new_event)
+                else:  # T-CELL MOVE
+                    # T-cells move in biased random walk. Determine if move will be random based on probability in
+                    # parameters
+                    random_move = False
+                    prob_random_move = np.random.randint(1, 101)
+                    if prob_random_move <= self.model_parameters['t_cell_random_move_probability']:
+                        random_move = True
+                    # Get neighbours
+                    neighbours = self.moore_neighbours(t_cell.address, 1)
+                    # If a random move, pick a neighbour at random
+                    if random_move:
+                        # Remove neighbours not on system
+                        possible_neighbours = [n for n in neighbours if self.grid[n] is not None]
+                        index = np.random.randint(0, len(possible_neighbours))
+                        chosen_neighbour_address = possible_neighbours[index]
+                    else: # Pick the neighbour with the highest chemokine level
+                        chosen_index = self.find_max_chemokine_neighbour(neighbours)[0]
+                        chosen_neighbour_address = neighbours[chosen_index]
+
+                    # Get neighbour
+                    neighbour = self.grid[chosen_neighbour_address]
+                    # Check neighbour is empty, then move T-cell there
+                    if neighbour['contents'] == 0.0 and neighbour['blood_vessel'] == 0.0:
+                        new_event = TCellMovement(t_cell.address, chosen_neighbour_address)
+                        self.potential_events.append(new_event)
+                    # Else if the address contains an infected macrophage, then t-cell may kill it
+                    elif isinstance(neighbour['contents'], Macrophage) and (neighbour['contents'].state == 'infected'
+                            or neighbour['contents'].state == 'chronically_infected'):
+                        # T-cell killing based on parameter probability
+                        prob_t_cell_killing = np.random.randint(1, 101)
+                        if prob_t_cell_killing <= self.model_parameters['t_cell_kills_macrophage_probability']:
+                            new_event = TCellKillsMacrophage(t_cell.address, chosen_neighbour_address)
+                            self.potential_events.append(new_event)
+
+
+
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
@@ -721,6 +799,25 @@ class ChemoKillMacrophage(Event):
         Event.__init__(self)
         self.macrophage_address = mac_address
 
+
+class TCellDeath(Event):
+    def __init__(self, t_cell_address):
+        Event.__init__(self)
+        self.t_cell_address = t_cell_address
+
+
+class TCellMovement(Event):
+    def __init__(self, tcell_from_address, tcell_to_address):
+        Event.__init__(self)
+        self.tcell_from_address = tcell_from_address
+        self.tcell_to_address = tcell_to_address
+
+
+class TCellKillsMacrophage(Event):
+    def __init__(self, tcell_address, macrophage_address):
+        Event.__init__(self)
+        self.tcell_address = tcell_address
+        self.macrophage_address = macrophage_address
 
 # ---------------------------------------- Runner -------------------------------------------------------
 
