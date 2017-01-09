@@ -50,6 +50,8 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['chemokine_scale_for_macrophage_activation'] = 101.0
         self.model_params['chemokine_scale_for_macrophage_deactivation'] = 0.0
         self.model_params['bacteria_to_burst_macrophage'] = 999999
+        self.model_params['oxygen_scale_for_metabolism_change_to_slow'] = -1.0
+        self.model_params['oxygen_scale_for_metabolism_change_to_fast'] = 101.0
 
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
@@ -998,7 +1000,86 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertItemsEqual(events[0].new_bacteria_addresses,
                     [(8, 9), (9, 8), (9, 7), (7, 8), (7, 9), (8, 7), (6, 8), (8, 6), (6, 7), (9, 6), (7, 6), (6, 9)])
 
-    
+    def test_bacteria_fast_to_slow(self):
+
+        self.automaton.bacteria = []
+        for b in self.fb:
+            self.automaton.grid[b]['contents'] = 0.0
+        for b in self.sb:
+            self.automaton.grid[b]['contents'] = 0.0
+
+        bac = Bacterium((8,8), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(8,8)]['contents'] = bac
+
+        self.model_params['oxygen_scale_for_metabolism_change_to_slow'] = 1.01
+        self.automaton.time = 999.0
+        events = self.automaton.bacteria_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], BacteriumStateChange))
+        self.assertEqual(events[0].attribute, "metabolism")
+        self.assertEqual(events[0].value, "slow")
+
+    def test_bacteria_fast_to_slow_negative(self):
+
+        self.automaton.bacteria = []
+        for b in self.fb:
+            self.automaton.grid[b]['contents'] = 0.0
+        for b in self.sb:
+            self.automaton.grid[b]['contents'] = 0.0
+
+        bac = Bacterium((8,8), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(8,8)]['contents'] = bac
+
+        self.model_params['oxygen_scale_for_metabolism_change_to_slow'] = 0.5
+
+        self.automaton.max_oxygen = 100.0
+        self.automaton.grid[(8,8)]['oxygen'] = 75.0
+
+        self.automaton.time = 999.0
+        events = self.automaton.bacteria_state_changes()
+        self.assertEqual(len(events), 0)
+
+
+    def test_bacteria_slow_to_fast(self):
+        self.automaton.bacteria = []
+        for b in self.fb:
+            self.automaton.grid[b]['contents'] = 0.0
+        for b in self.sb:
+            self.automaton.grid[b]['contents'] = 0.0
+
+        bac = Bacterium((8,8), 'slow')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(8,8)]['contents'] = bac
+
+        self.model_params['oxygen_scale_for_metabolism_change_to_fast'] = -1
+        self.automaton.time = 999.0
+        events = self.automaton.bacteria_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], BacteriumStateChange))
+        self.assertEqual(events[0].attribute, "metabolism")
+        self.assertEqual(events[0].value, "fast")
+
+    def test_bacteria_slow_to_fast_negative(self):
+        self.automaton.bacteria = []
+        for b in self.fb:
+            self.automaton.grid[b]['contents'] = 0.0
+        for b in self.sb:
+            self.automaton.grid[b]['contents'] = 0.0
+
+        bac = Bacterium((8,8), 'slow')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(8,8)]['contents'] = bac
+
+        self.model_params['oxygen_scale_for_metabolism_change_to_fast'] = 0.5
+
+        self.automaton.max_oxygen = 100.0
+        self.automaton.grid[(8, 8)]['oxygen'] = 25.0
+
+        self.automaton.time = 999.0
+        events = self.automaton.bacteria_state_changes()
+        self.assertEqual(len(events), 0)
 
 
 if __name__ == '__main__':
