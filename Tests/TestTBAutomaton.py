@@ -30,7 +30,11 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['macrophage_recruitment_probability'] = 0.0
         self.model_params['chemotherapy_scale_for_kill_fast_bacteria'] = 1.01
         self.model_params['chemotherapy_scale_for_kill_slow_bacteria'] = 1.01
-
+        self.model_params['chemotherapy_scale_for_kill_macrophage'] = 1.01
+        self.model_params['t_cell_movement_time'] = 999999
+        self.model_params['t_cell_age_threshold'] = 999999
+        self.model_params['t_cell_random_move_probability'] = 0.0
+        self.model_params['t_cell_kills_macrophage_probability'] = 0.0
 
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
@@ -429,7 +433,140 @@ class TBAutomatonTestCase(unittest.TestCase):
         events = self.automaton.chemotherapy_killing_macrophages()
         self.assertEqual(len(events), 0)
 
+    def test_t_cell_death(self):
+        self.automaton.model_parameters['t_cell_age_threshold'] = 1.0
+        self.automaton.time_step = 1
 
+        # Add t-cells
+        t_cell = TCell((7, 2))
+        self.automaton.t_cells.append(t_cell)
+
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], TCellDeath))
+        self.assertEqual(events[0].t_cell_address, (7, 2))
+
+    def test_find_max_chemokine_neighbour(self):
+
+        self.automaton.grid[(0,0)]['chemokine'] = 1.0
+        self.automaton.max_chemokine = 1.0
+
+        neighbours = self.automaton.moore_neighbours((1,1), 1)
+        address, scale = self.automaton.find_max_chemokine_neighbour(neighbours)
+        self.assertEqual(address, (0,0))
+        self.assertEqual(scale, 1.0)
+
+        # tie-break
+        self.automaton.grid[(2, 0)]['chemokine'] = 1.0
+        np.random.seed(101) # Force pick of (2, 0)
+        neighbours = self.automaton.moore_neighbours((1, 1), 1)
+        address, scale = self.automaton.find_max_chemokine_neighbour(neighbours)
+        self.assertEqual(address, (2, 0))
+        self.assertEqual(scale, 1.0)
+
+    def test_t_cell_moves_not_random(self):
+
+        self.automaton.model_parameters['t_cell_movement_time'] = 1
+        self.automaton.grid[(7,1)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        # Add t-cells
+        t_cell = TCell((7, 2))
+        self.automaton.t_cells.append(t_cell)
+
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], TCellMovement))
+        self.assertEqual(events[0].tcell_from_address, (7, 2))
+        self.assertEqual(events[0].tcell_to_address, (7, 1))
+
+    def test_t_cell_moves_random(self):
+
+        self.automaton.model_parameters['t_cell_movement_time'] = 1
+        self.automaton.model_parameters['t_cell_random_move_probability'] = 101.0
+        self.automaton.grid[(7,1)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        # Add t-cells
+        t_cell = TCell((5, 1))
+        self.automaton.t_cells.append(t_cell)
+
+        np.random.seed(101)
+
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], TCellMovement))
+        self.assertEqual(events[0].tcell_from_address, (5, 1))
+        self.assertEqual(events[0].tcell_to_address, (6, 1))
+
+    def test_t_cell_kills_mac(self):
+
+        self.automaton.model_parameters['t_cell_kills_macrophage_probability'] = 100.0
+        self.automaton.model_parameters['t_cell_movement_time'] = 1
+        self.automaton.grid[(7,1)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        mac = Macrophage((7, 1), 'infected')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(7, 1)]['contents'] = mac
+
+        # Add t-cells
+        t_cell = TCell((7, 2))
+        self.automaton.t_cells.append(t_cell)
+
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], TCellKillsMacrophage))
+        self.assertEqual(events[0].tcell_address, (7, 2))
+        self.assertEqual(events[0].macrophage_address, (7, 1))
+
+        mac.state = 'chronically_infected'
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], TCellKillsMacrophage))
+        self.assertEqual(events[0].tcell_address, (7, 2))
+        self.assertEqual(events[0].macrophage_address, (7, 1))
+
+
+    def test_t_cell_kills_mac_negative_prob(self):
+
+        self.automaton.model_parameters['t_cell_kills_macrophage_probability'] = 0.0
+        self.automaton.model_parameters['t_cell_movement_time'] = 1
+        self.automaton.grid[(7,1)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        mac = Macrophage((7, 1), 'infected')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(7, 1)]['contents'] = mac
+
+        # Add t-cells
+        t_cell = TCell((7, 2))
+        self.automaton.t_cells.append(t_cell)
+
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 0)
+
+    def test_t_cell_kills_mac_negative_state(self):
+
+        self.automaton.model_parameters['t_cell_kills_macrophage_probability'] = 100.0
+        self.automaton.model_parameters['t_cell_movement_time'] = 1
+        self.automaton.grid[(7,1)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        mac = Macrophage((7, 1), 'resting')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(7, 1)]['contents'] = mac
+
+        # Add t-cells
+        t_cell = TCell((7, 2))
+        self.automaton.t_cells.append(t_cell)
+
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 0)
+
+        mac.state = 'active'
+        events = self.automaton.t_cell_processes()
+        self.assertEqual(len(events), 0)
 
 
 
