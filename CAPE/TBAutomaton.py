@@ -879,6 +879,47 @@ class TBAutomaton(Automaton):
 
         return mac_state_change_events
 
+    def bacteria_state_changes(self):
+        """
+        Bacteria switch between metabolism based on oxygen and switch resting true to false based on space
+        :return:
+        """
+        bac_state_events = []
+        # Loop through bacteria
+        for bacterium in self.bacteria:
+            # Metabolism change only happens later in process (after 2 hours)
+            if self.time > 2 / self.time_step:
+                # Check if state change - different scales based on metabolism
+                print self.oxygen_scale(bacterium.address)
+                if bacterium.metabolism == 'fast' and self.oxygen_scale(bacterium.address) <= \
+                        self.model_parameters['oxygen_scale_for_metabolism_change_to_slow']:
+                    new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'slow')
+                    bac_state_events.append(new_event)
+                elif bacterium.metabolism == 'slow' and self.oxygen_scale(bacterium.address) > \
+                        self.model_parameters['oxygen_scale_for_metabolism_change_to_fast']:
+                    new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'fast')
+                    bac_state_events.append(new_event)
+            # If bacteria is resting, check if there is now space in neighbourhood, if so, revert to non-resting
+            if bacterium.resting:
+                space_found = False
+                for depth in range(1, 4):
+                    # Get neighbours
+                    neighbours = self.moore_neighbours(bacterium.address, depth)
+                    for n in neighbours:
+                        # Is neighbour empty?
+                        neighbour = self.grid[n]
+                        if neighbour is not None and neighbour['blood_vessel'] == 0.0 and neighbour['contents'] == 0.0:
+                            new_event = BacteriumStateChange(bacterium.address, 'resting', False)
+                            bac_state_events.append(new_event)
+                            space_found = True
+                            # Don't check other neighbours
+                            break
+                    # Space found so don't check further depths
+                    if space_found:
+                        break
+        return bac_state_events
+
+
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
