@@ -455,10 +455,10 @@ class TBAutomaton(Automaton):
         events += self.macrophage_recruitment()
         events += self.chemotherapy_killing_bacteria()
         events += self.chemotherapy_killing_macrophages()
-        # events += self.t_cell_processes()
-        # events += self.macrophage_processes()
-        # events += self.macrophage_state_changes()
-        # events += self.bacteria_state_changes()
+        events += self.t_cell_processes()
+        events += self.macrophage_processes()
+        events += self.macrophage_state_changes()
+        events += self.bacteria_state_changes()
         return events
 
     def total_bacteria(self):
@@ -818,6 +818,67 @@ class TBAutomaton(Automaton):
 
         return mac_events
 
+    def macrophage_state_changes(self):
+        """
+        Macrophages change state based on chemokine levels and intracellular bacteria
+        :return:
+        """
+        mac_state_change_events = []
+
+        # Loop through macrophages
+        for macrophage in self.macrophages:
+            new_event = None
+
+            # Resting macrophages
+            if macrophage.state == 'resting':
+                # RESTING -> ACTIVE
+                if self.chemokine_scale(macrophage.address) > \
+                        self.model_parameters['chemokine_scale_for_macrophage_activation'] \
+                        and macrophage.intracellular_bacteria == 0:
+                    new_event = MacrophageChangesState(macrophage.address, 'active')
+                # RESTING -> INFECTED
+                elif macrophage.intracellular_bacteria == 1:
+                    new_event = MacrophageChangesState(macrophage.address, 'infected')
+            elif macrophage.state == 'active':
+                # ACTIVE -> RESTING
+                if self.chemokine_scale(macrophage.address) < \
+                        self.model_parameters['chemokine_scale_for_macrophage_deactivation']:
+                    new_event = MacrophageChangesState(macrophage.address, 'resting')
+            elif macrophage.state == 'infected':
+                # INFECTED -> CHRONICALLY INFECTED
+                if macrophage.intracellular_bacteria >= self.model_parameters['bacteria_to_turn_chronically_infected']:
+                    new_event = MacrophageChangesState(macrophage.address, 'chronically_infected')
+            elif macrophage.state == 'chronically_infected':
+                # MACROPHAGE BURSTS
+                if macrophage.intracellular_bacteria == self.model_parameters['bacteria_to_burst_macrophage']:
+                    # Loop through all neighbours (up to depth 3) and try to find enough to distribute bacteria on to
+                    bacteria_addresses = []
+                    for depth in range(1, 4):
+                        neighbours = self.moore_neighbours(macrophage.address, depth).keys()
+                        # Shuffle the neighbours so we don't give priority
+                        np.random.shuffle(neighbours)
+                        for n in neighbours:
+                            # Find empty neighbours
+                            neighbour = self.grid[n]
+                            if neighbour['contents'] == 0.0 and neighbour['blood_vessel'] == 0.0:
+                                bacteria_addresses.append(n)
+                            # Limit reached - break here stops checking other neighbours at this depth, also need to
+                            # stop searching further depths
+                            if len(bacteria_addresses) == self.model_parameters['bacteria_to_burst_macrophage']:
+                                # Break neighbour loop
+                                break
+                        # Limit reached earlier so don't check other depths
+                        if len(bacteria_addresses) == self.model_parameters['bacteria_to_burst_macrophage']:
+                            # Break depth loop
+                            break
+                    # Macrophage bursting event
+                    new_event = MacrophageBursts(macrophage.address, bacteria_addresses)
+
+            if new_event is not None:
+                mac_state_change_events.append(new_event)
+
+        return mac_state_change_events
+
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
@@ -956,6 +1017,21 @@ class MacrophageIngestsBacterium(Event):
         Event.__init__(self)
         self.macrophage_address = macrophage_address
         self.bacterium_address = bacterium_address
+
+
+class MacrophageChangesState(Event):
+    def __init__(self, mac_address, state):
+        Event.__init__(self)
+        self.macrophage_address = mac_address
+        self.new_state = state
+
+
+class MacrophageBursts(Event):
+    def __init__(self, mac_address, new_bacteria_addresses):
+        Event.__init__(self)
+        self.macrophage_address = mac_address
+        self.new_bacteria_addresses = new_bacteria_addresses
+
 
 # ---------------------------------------- Runner -------------------------------------------------------
 

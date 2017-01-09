@@ -47,6 +47,9 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['infected_macrophage_movement_time'] = 1000000.0
         self.model_params['chronically_infected_macrophage_age_limit'] = 1000000.0
         self.model_params['chronically_infected_macrophage_movement_time'] = 1000000.0
+        self.model_params['chemokine_scale_for_macrophage_activation'] = 101.0
+        self.model_params['chemokine_scale_for_macrophage_deactivation'] = 0.0
+        self.model_params['bacteria_to_burst_macrophage'] = 999999
 
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
@@ -943,6 +946,59 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.assertEqual(events[0].macrophage_address, (8, 8))
         self.assertEqual(events[0].bacterium_address, (9, 9))
 
+    def test_macrophage_resting_to_active(self):
+        self.automaton.model_parameters['chemokine_scale_for_macrophage_activation'] = 0.0
+        self.automaton.grid[self.macs[0]]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+        events = self.automaton.macrophage_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageChangesState))
+        self.assertEqual(events[0].macrophage_address, self.macs[0])
+        self.assertEqual(events[0].new_state, 'active')
+
+    def test_macrophage_active_to_resting(self):
+        self.automaton.grid[self.macs[0]]['contents'].state = 'active'
+        self.automaton.model_parameters['chemokine_scale_for_macrophage_deactivation'] = 101.0
+        self.automaton.grid[self.macs[0]]['chemokine'] = 0.0
+        self.automaton.max_chemokine = 100.0
+        events = self.automaton.macrophage_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageChangesState))
+        self.assertEqual(events[0].macrophage_address, self.macs[0])
+        self.assertEqual(events[0].new_state, 'resting')
+
+    def test_macrophage_resting_to_infected(self):
+        self.automaton.grid[self.macs[0]]['contents'].intracellular_bacteria = 1
+        events = self.automaton.macrophage_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageChangesState))
+        self.assertEqual(events[0].macrophage_address, self.macs[0])
+        self.assertEqual(events[0].new_state, 'infected')
+
+    def test_macrophage_infected_to_chr_infected(self):
+        self.automaton.model_parameters['bacteria_to_turn_chronically_infected'] = 88
+        self.automaton.grid[self.macs[0]]['contents'].intracellular_bacteria = 88
+        self.automaton.grid[self.macs[0]]['contents'].state = 'infected'
+        events = self.automaton.macrophage_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageChangesState))
+        self.assertEqual(events[0].macrophage_address, self.macs[0])
+        self.assertEqual(events[0].new_state, 'chronically_infected')
+
+    def test_macrophage_burst(self):
+        self.automaton.model_parameters['bacteria_to_burst_macrophage'] = 20
+        self.automaton.grid[self.macs[0]]['contents'].state = 'chronically_infected'
+        self.automaton.grid[self.macs[0]]['contents'].intracellular_bacteria = 20
+
+        np.random.seed(101)
+        events = self.automaton.macrophage_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageBursts))
+        self.assertEqual(events[0].macrophage_address, self.macs[0])
+        self.assertItemsEqual(events[0].new_bacteria_addresses,
+                    [(8, 9), (9, 8), (9, 7), (7, 8), (7, 9), (8, 7), (6, 8), (8, 6), (6, 7), (9, 6), (7, 6), (6, 9)])
+
+    
 
 
 if __name__ == '__main__':
