@@ -35,7 +35,10 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.model_params['t_cell_age_threshold'] = 999999
         self.model_params['t_cell_random_move_probability'] = 0.0
         self.model_params['t_cell_kills_macrophage_probability'] = 0.0
-
+        self.model_params['resting_macrophage_age_limit'] = 100000.0
+        self.model_params['resting_macrophage_movement_time'] = 100000.0
+        self.model_params['prob_resting_macrophage_random_move'] = 0.0
+        self.model_params['minimum_chemokine_for_resting_macrophage_movement'] = 101.0
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
         self.macs = [(9, 9), (8, 8), (7, 7), (6, 6)]
@@ -568,6 +571,117 @@ class TBAutomatonTestCase(unittest.TestCase):
         events = self.automaton.t_cell_processes()
         self.assertEqual(len(events), 0)
 
+    def test_macrophage_resting_death(self):
+        self.automaton.model_parameters['resting_macrophage_age_limit'] = 1.0
+
+        self.automaton.macrophages = []
+        for m in self.macs:
+            self.automaton.grid[m]['contents'] = 0.0
+
+        mac = Macrophage((8,8),'resting')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(8,8)]['contents'] = mac
+
+        self.automaton.time = 100.0
+        events = self.automaton.macrophage_processes()
+
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageDeath))
+        self.assertEqual(events[0].macrophage_address, (8,8))
+
+    def test_macrophage_resting_move_not_random(self):
+        self.automaton.model_parameters['resting_macrophage_movement_time'] = 1.0
+        self.automaton.model_parameters['minimum_chemokine_for_resting_macrophage_movement'] = 0.0
+
+        self.automaton.grid[(7,8)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        self.automaton.macrophages = []
+        for m in self.macs:
+            self.automaton.grid[m]['contents'] = 0.0
+
+        mac = Macrophage((8, 8), 'resting')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(8, 8)]['contents'] = mac
+
+        self.automaton.time = 100.0
+        events = self.automaton.macrophage_processes()
+
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageMovement))
+        self.assertEqual(events[0].macrophage_from_address, (8, 8))
+        self.assertEqual(events[0].macrophage_to_address, (7, 8))
+
+    def test_macrophage_resting_move_random_through_prob(self):
+        self.automaton.model_parameters['resting_macrophage_movement_time'] = 1.0
+        self.automaton.model_parameters['prob_resting_macrophage_random_move'] = 100.0
+
+        self.automaton.grid[(7,8)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        self.automaton.macrophages = []
+        for m in self.macs:
+            self.automaton.grid[m]['contents'] = 0.0
+
+        mac = Macrophage((8, 8), 'resting')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(8, 8)]['contents'] = mac
+
+        self.automaton.time = 100.0
+        np.random.seed(101)
+        events = self.automaton.macrophage_processes()
+
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageMovement))
+        self.assertEqual(events[0].macrophage_from_address, (8, 8))
+        self.assertEqual(events[0].macrophage_to_address, (7, 7))
+
+        def test_macrophage_resting_move_random_through_not_enough_chemokine(self):
+            self.automaton.model_parameters['resting_macrophage_movement_time'] = 1.0
+            self.automaton.model_parameters['minimum_chemokine_for_resting_macrophage_movement'] = 101.0
+
+            self.automaton.grid[(7, 8)]['chemokine'] = 100.0
+            self.automaton.max_chemokine = 100.0
+
+            self.automaton.macrophages = []
+            for m in self.macs:
+                self.automaton.grid[m]['contents'] = 0.0
+
+            mac = Macrophage((8, 8), 'resting')
+            self.automaton.macrophages.append(mac)
+            self.automaton.grid[(8, 8)]['contents'] = mac
+
+            self.automaton.time = 100.0
+            np.random.seed(101)
+            events = self.automaton.macrophage_processes()
+
+            self.assertEqual(len(events), 1)
+            self.assertTrue(isinstance(events[0], MacrophageMovement))
+            self.assertEqual(events[0].macrophage_from_address, (8, 8))
+            self.assertEqual(events[0].macrophage_to_address, (7, 7))
+
+    def test_macrophage_resting_kill_bac(self):
+        self.automaton.model_parameters['resting_macrophage_movement_time'] = 1.0
+        self.automaton.model_parameters['minimum_chemokine_for_resting_macrophage_movement'] = 0.0
+
+        self.automaton.grid[(7,8)]['chemokine'] = 100.0
+        self.automaton.max_chemokine = 100.0
+
+        self.automaton.macrophages = []
+        for m in self.macs:
+            self.automaton.grid[m]['contents'] = 0.0
+
+        mac = Macrophage((8, 8), 'resting')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(8, 8)]['contents'] = mac
+
+        self.automaton.time = 100.0
+        events = self.automaton.macrophage_processes()
+
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], MacrophageMovement))
+        self.assertEqual(events[0].macrophage_from_address, (8, 8))
+        self.assertEqual(events[0].macrophage_to_address, (7, 8))
 
 
 if __name__ == '__main__':
