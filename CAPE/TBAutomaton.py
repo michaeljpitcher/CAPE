@@ -453,8 +453,8 @@ class TBAutomaton(Automaton):
         events += self.bacteria_replication()
         events += self.t_cell_recruitment()
         events += self.macrophage_recruitment()
-        # events += self.chemotherapy_killing_bacteria()
-        # events += self.chemotherapy_killing_macrophages()
+        events += self.chemotherapy_killing_bacteria()
+        events += self.chemotherapy_killing_macrophages()
         # events += self.t_cell_processes()
         # events += self.macrophage_processes()
         # events += self.macrophage_state_changes()
@@ -609,6 +609,19 @@ class TBAutomaton(Automaton):
                 chemo_kill_bac_events.append(new_event)
         return chemo_kill_bac_events
 
+    def chemotherapy_killing_macrophages(self):
+        chemo_kill_mac_events = []
+        # Loop through all macrophages
+        for macrophage in self.macrophages:
+            # Check chemotherapy scale against relevant parameter based on metabolism
+            chemo_scale = self.chemotherapy_scale(macrophage.address)
+            if (macrophage.state == 'infected' or macrophage.state == 'chronically_infected') \
+                and chemo_scale > self.model_parameters['chemotherapy_scale_for_kill_macrophage']:
+                # Scale is high enough, so create event to destroy bacterium
+                new_event = ChemoKillMacrophage(macrophage.address)
+                chemo_kill_mac_events.append(new_event)
+        return chemo_kill_mac_events
+
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
@@ -701,6 +714,13 @@ class ChemoKillBacterium(Event):
     def __init__(self, bac_address):
         Event.__init__(self)
         self.bacterium_address = bac_address
+
+
+class ChemoKillMacrophage(Event):
+    def __init__(self, mac_address):
+        Event.__init__(self)
+        self.macrophage_address = mac_address
+
 
 # ---------------------------------------- Runner -------------------------------------------------------
 
