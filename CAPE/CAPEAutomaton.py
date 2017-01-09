@@ -265,7 +265,7 @@ class Automaton:
 class Agent:
     def __init__(self, address):
         """
-        An Autonamous actor within the system. Abstract - should be subclassed.
+        An Autonomous actor within the system. Abstract - should be subclassed.
         """
         self.address = address
         self.age = 0.0

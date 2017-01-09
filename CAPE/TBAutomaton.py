@@ -732,9 +732,7 @@ class TBAutomaton(Automaton):
                         random_move = True
                     # Pick the neighbour to move to, either random or highest chemokine scale
                     if random_move:
-                        r = np.random.randint(0, len(neighbours))
-                        print r
-                        chosen_neighbour_address = neighbours.keys()[r]
+                        chosen_neighbour_address = neighbours.keys()[np.random.randint(0, len(neighbours))]
                     else:
                         chosen_neighbour_address = max_chemokine_address
                     # Check if leaving the grid
@@ -799,7 +797,7 @@ class TBAutomaton(Automaton):
                         self.model_parameters['chronically_infected_macrophage_movement_time'] == 0:
                     # Move to highest chemokine scale neighbour
                     neighbours = self.moore_neighbours(macrophage.address, 1)
-                    chosen_neighbour_address = neighbours[self.find_max_chemokine_neighbour(neighbours)[0]]
+                    chosen_neighbour_address = self.find_max_chemokine_neighbour(neighbours)[0]
                     neighbour = self.grid[chosen_neighbour_address]
                     # Neighbour is empty, so move event
                     if neighbour['contents'] == 0.0 and neighbour['blood_vessel'] == 0.0:
