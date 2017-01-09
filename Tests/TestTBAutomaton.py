@@ -1081,6 +1081,42 @@ class TBAutomatonTestCase(unittest.TestCase):
         events = self.automaton.bacteria_state_changes()
         self.assertEqual(len(events), 0)
 
+    def test_bacteria_resting_to_non_resting(self):
+        self.automaton.bacteria = []
+        for b in self.fb:
+            self.automaton.grid[b]['contents'] = 0.0
+        for b in self.sb:
+            self.automaton.grid[b]['contents'] = 0.0
+
+        bac = Bacterium((8, 8), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(8, 8)]['contents'] = bac
+        bac.resting = True
+        events = self.automaton.bacteria_state_changes()
+        self.assertEqual(len(events), 1)
+        self.assertTrue(isinstance(events[0], BacteriumStateChange))
+        self.assertEqual(events[0].attribute, "resting")
+        self.assertEqual(events[0].value, False)
+
+    def test_bacteria_resting_to_non_resting_negative(self):
+        self.automaton.bacteria = []
+        for b in self.fb:
+            self.automaton.grid[b]['contents'] = 0.0
+        for b in self.sb:
+            self.automaton.grid[b]['contents'] = 0.0
+
+        for x in range(self.shape[0]):
+            for y in range(self.shape[1]):
+                if not (x == 8 and y == 8):
+                    self.automaton.grid[(x,y)]['contents'] = Caseum((x,y))
+
+        bac = Bacterium((8, 8), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(8, 8)]['contents'] = bac
+        bac.resting = True
+        events = self.automaton.bacteria_state_changes()
+        self.assertEqual(len(events), 0)
+        
 
 if __name__ == '__main__':
     unittest.main()

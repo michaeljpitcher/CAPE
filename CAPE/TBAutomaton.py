@@ -890,7 +890,6 @@ class TBAutomaton(Automaton):
             # Metabolism change only happens later in process (after 2 hours)
             if self.time > 2 / self.time_step:
                 # Check if state change - different scales based on metabolism
-                print self.oxygen_scale(bacterium.address)
                 if bacterium.metabolism == 'fast' and self.oxygen_scale(bacterium.address) <= \
                         self.model_parameters['oxygen_scale_for_metabolism_change_to_slow']:
                     new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'slow')
