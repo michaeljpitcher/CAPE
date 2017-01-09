@@ -34,7 +34,7 @@ class TBAutomatonTestCase(unittest.TestCase):
 
 
         self.bv = [(1, 1), (2, 3), (3, 5)]
-        self.macs = [(9, 9), (8, 8), (7, 7)]
+        self.macs = [(9, 9), (8, 8), (7, 7), (6, 6)]
         self.fb = [(8, 1), (8, 2), (8, 3)]
         self.sb = [(1, 7), (2, 7)]
 
@@ -378,6 +378,55 @@ class TBAutomatonTestCase(unittest.TestCase):
         for a in bacs_to_save:
             self.automaton.grid[a]['chemotherapy'] = 1.0
         events = self.automaton.chemotherapy_killing_bacteria()
+        self.assertEqual(len(events), 0)
+
+    def test_chemo_kill_macrophages(self):
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_macrophage'] = -0.1
+
+        self.automaton.max_chemotherapy = 100.0
+
+        # Infected - killed
+        self.automaton.grid[self.macs[0]]['contents'].state = 'infected'
+        self.automaton.grid[self.macs[0]]['chemotherapy'] = 70.0
+        # Chronically infected - killed
+        self.automaton.grid[self.macs[1]]['contents'].state = 'chronically_infected'
+        self.automaton.grid[self.macs[1]]['chemotherapy'] = 70.0
+
+        events = self.automaton.chemotherapy_killing_macrophages()
+        self.assertEqual(len(events), 2)
+        for e in events:
+            self.assertTrue(isinstance(e, ChemoKillMacrophage))
+        addresses = [e.macrophage_address for e in events]
+        self.assertItemsEqual(addresses, [self.macs[0], self.macs[1]])
+
+    def test_chemo_kill_macrophages_negative_state(self):
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_macrophage'] = -0.1
+
+        self.automaton.max_chemotherapy = 100.0
+
+        # Resting - not killed
+        self.automaton.grid[self.macs[0]]['contents'].state = 'resting'
+        self.automaton.grid[self.macs[0]]['chemotherapy'] = 70.0
+        # Active - not killed
+        self.automaton.grid[self.macs[1]]['contents'].state = 'active'
+        self.automaton.grid[self.macs[1]]['chemotherapy'] = 70.0
+
+        events = self.automaton.chemotherapy_killing_macrophages()
+        self.assertEqual(len(events), 0)
+
+    def test_chemo_kill_macrophages_negative_scale(self):
+        self.automaton.model_parameters['chemotherapy_scale_for_kill_macrophage'] = 0.8
+
+        self.automaton.max_chemotherapy = 100.0
+
+        # Infected
+        self.automaton.grid[self.macs[0]]['contents'].state = 'infected'
+        self.automaton.grid[self.macs[0]]['chemotherapy'] = 70.0
+        # Chronically infected
+        self.automaton.grid[self.macs[1]]['contents'].state = 'chronically_infected'
+        self.automaton.grid[self.macs[1]]['chemotherapy'] = 70.0
+
+        events = self.automaton.chemotherapy_killing_macrophages()
         self.assertEqual(len(events), 0)
 
 
