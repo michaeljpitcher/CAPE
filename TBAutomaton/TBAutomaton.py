@@ -494,9 +494,6 @@ class TBAutomaton(Automaton):
             elif neighbours[index]['chemokine'] == max_chemokine:
                 highest_indices.append(index)
 
-        if len(highest_indices) == 0:
-            print neighbours
-
         # Tie-breaking. If just one pick it, else pick any one index at random
         choice = np.random.randint(0, len(highest_indices))
         chosen_index = highest_indices[choice]
