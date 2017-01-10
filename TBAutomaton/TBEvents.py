@@ -203,6 +203,9 @@ class MacrophageBursts(Event):
     def perform_event(self, automaton):
         macrophage = automaton.grid[self.macrophage_address]['contents']
         automaton.macrophages.remove(macrophage)
+        caseum = Caseum(self.macrophage_address)
+        automaton.caseum_addresses.append(self.macrophage_address)
+        automaton.work_grid[self.macrophage_address]['contents'] = caseum
 
         for address in self.new_bacteria_addresses:
             # Check if the event is still in the impacted addresses (will have been removed if something else has
