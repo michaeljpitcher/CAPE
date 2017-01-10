@@ -182,9 +182,6 @@ class MacrophageIngestsBacterium(Event):
                 macrophage.state = 'chronically_infected'
 
 
-
-
-
 class MacrophageActivation(Event):
     def __init__(self, mac_address, state):
         Event.__init__(self, [mac_address], [mac_address])
@@ -192,7 +189,7 @@ class MacrophageActivation(Event):
         self.new_state = state
 
     def perform_event(self, automaton):
-        pass
+        automaton.grid[self.macrophage_address]['contents'].state = self.new_state
 
 
 class MacrophageBursts(Event):
