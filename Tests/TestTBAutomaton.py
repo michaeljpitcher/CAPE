@@ -212,7 +212,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.model_parameters['bacteria_replication_fast_lower'] = 5.0
         self.automaton.model_parameters['bacteria_replication_slow_upper'] = 100.0
         self.automaton.model_parameters['bacteria_replication_slow_lower'] = 99.0
-        events = self.automaton.bacteria_replication()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), len(self.fb))
         for event in events:
             self.assertTrue(isinstance(event, BacteriumReplication))
@@ -226,7 +226,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.model_parameters['bacteria_replication_fast_lower'] = 2.0
         self.automaton.model_parameters['bacteria_replication_slow_upper'] = 6.0
         self.automaton.model_parameters['bacteria_replication_slow_lower'] = 5.0
-        events = self.automaton.bacteria_replication()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), len(self.sb))
         for event in events:
             self.assertTrue(isinstance(event, BacteriumReplication))
@@ -246,7 +246,7 @@ class TBAutomatonTestCase(unittest.TestCase):
                 else:
                     self.automaton.grid[(x, y)]['contents'] = Caseum((x, y))
 
-        events = self.automaton.bacteria_replication()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 1)
         self.assertTrue(isinstance(events[0], BacteriumStateChange))
         self.assertEqual(events[0].attribute, 'resting')
@@ -999,7 +999,7 @@ class TBAutomatonTestCase(unittest.TestCase):
 
         self.model_params['oxygen_scale_for_metabolism_change_to_slow'] = 1.01
         self.automaton.time = 999.0
-        events = self.automaton.bacteria_state_changes()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 1)
         self.assertTrue(isinstance(events[0], BacteriumStateChange))
         self.assertEqual(events[0].attribute, "metabolism")
@@ -1023,7 +1023,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.grid[(8,8)]['oxygen'] = 75.0
 
         self.automaton.time = 999.0
-        events = self.automaton.bacteria_state_changes()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 0)
 
 
@@ -1040,7 +1040,7 @@ class TBAutomatonTestCase(unittest.TestCase):
 
         self.model_params['oxygen_scale_for_metabolism_change_to_fast'] = -1
         self.automaton.time = 999.0
-        events = self.automaton.bacteria_state_changes()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 1)
         self.assertTrue(isinstance(events[0], BacteriumStateChange))
         self.assertEqual(events[0].attribute, "metabolism")
@@ -1063,7 +1063,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.grid[(8, 8)]['oxygen'] = 25.0
 
         self.automaton.time = 999.0
-        events = self.automaton.bacteria_state_changes()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 0)
 
     def test_bacteria_resting_to_non_resting(self):
@@ -1077,7 +1077,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.bacteria.append(bac)
         self.automaton.grid[(8, 8)]['contents'] = bac
         bac.resting = True
-        events = self.automaton.bacteria_state_changes()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 1)
         self.assertTrue(isinstance(events[0], BacteriumStateChange))
         self.assertEqual(events[0].attribute, "resting")
@@ -1099,7 +1099,7 @@ class TBAutomatonTestCase(unittest.TestCase):
         self.automaton.bacteria.append(bac)
         self.automaton.grid[(8, 8)]['contents'] = bac
         bac.resting = True
-        events = self.automaton.bacteria_state_changes()
+        events = self.automaton.bacteria_processes()
         self.assertEqual(len(events), 0)
         
 
