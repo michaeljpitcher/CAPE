@@ -116,7 +116,15 @@ class TCellKillsMacrophage(Event):
         self.macrophage_address = macrophage_address
 
     def perform_event(self, automaton):
-        pass
+        t_cell = automaton.grid[self.tcell_address]['contents']
+        macrophage = automaton.grid[self.macrophage_address]['contents']
+
+        automaton.t_cells.remove(t_cell)
+        automaton.work_grid[self.tcell_address]['contents'] = 0.0
+        automaton.macrophages.remove(macrophage)
+        caseum = Caseum(self.macrophage_address)
+        automaton.caseum_addresses.append(self.macrophage_address)
+        automaton.work_grid[self.macrophage_address]['conents'] = caseum
 
 
 class MacrophageDeath(Event):
