@@ -1,4 +1,5 @@
 from CAPE.Event import *
+from TBAgents import *
 
 
 class BacteriumReplication(Event):
@@ -8,9 +9,16 @@ class BacteriumReplication(Event):
         self.new_bac_address = new_bac_address
         self.new_metabolism = new_metabolism
 
-    def perform_event(self, work_grid):
-        pass
+    def perform_event(self, tb_automaton):
+        new_bacterium = Bacterium(self.new_bac_address, self.new_metabolism)
+        tb_automaton.bacteria.append(new_bacterium)
+        tb_automaton.work_grid[(self.new_bac_address)]['contents'] = new_bacterium
 
+        original_bacterium = tb_automaton.grid[self.original_bac_address]['contents']
+        if original_bacterium.division_neighbourhood == 'mo':
+            original_bacterium.division_neighbourhood = 'vn'
+        else:
+            original_bacterium.division_neighbourhood = 'mo'
 
 class BacteriumStateChange(Event):
     def __init__(self, address, attribute, value):
@@ -19,7 +27,7 @@ class BacteriumStateChange(Event):
         self.attribute = attribute
         self.value = value
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -29,7 +37,7 @@ class RecruitTCell(Event):
         self.blood_vessel_address = bv_address
         self.new_t_cell_address = new_t_cell_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -39,7 +47,7 @@ class RecruitMacrophage(Event):
         self.blood_vessel_address = bv_address
         self.new_macrophage_address = new_macrophage_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -48,7 +56,7 @@ class ChemoKillBacterium(Event):
         Event.__init__(self, [bac_address], [bac_address])
         self.bacterium_address = bac_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -57,7 +65,7 @@ class ChemoKillMacrophage(Event):
         Event.__init__(self, [mac_address], [mac_address])
         self.macrophage_address = mac_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -66,7 +74,7 @@ class TCellDeath(Event):
         Event.__init__(self, [t_cell_address], [t_cell_address])
         self.t_cell_address = t_cell_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -76,7 +84,7 @@ class TCellMovement(Event):
         self.tcell_from_address = tcell_from_address
         self.tcell_to_address = tcell_to_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -86,7 +94,7 @@ class TCellKillsMacrophage(Event):
         self.tcell_address = tcell_address
         self.macrophage_address = macrophage_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -95,7 +103,7 @@ class MacrophageDeath(Event):
         Event.__init__(self, [macrophage_address], [macrophage_address])
         self.macrophage_address = macrophage_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -106,7 +114,7 @@ class MacrophageMovement(Event):
         self.macrophage_from_address = macrophage_from_address
         self.macrophage_to_address = macrophage_to_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -116,7 +124,7 @@ class MacrophageIngestsBacterium(Event):
         self.macrophage_address = macrophage_address
         self.bacterium_address = bacterium_address
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -126,7 +134,7 @@ class MacrophageChangesState(Event):
         self.macrophage_address = mac_address
         self.new_state = state
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
 
@@ -138,6 +146,6 @@ class MacrophageBursts(Event):
         self.macrophage_address = mac_address
         self.new_bacteria_addresses = new_bacteria_addresses
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         pass
 
