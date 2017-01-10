@@ -163,7 +163,24 @@ class MacrophageIngestsBacterium(Event):
         self.bacterium_address = bacterium_address
 
     def perform_event(self, automaton):
-        pass
+        macrophage = automaton.grid[self.macrophage_address]['contents']
+        bacterium = automaton.grid[self.bacterium_address]['contents']
+
+        automaton.bacteria.remove(bacterium)
+        automaton.work_grid[self.macrophage_address]['contents'] = 0.0
+        automaton.work_grid[self.bacterium_address]['contents'] = macrophage
+
+        # If not active, intracellular bacteria count increases by 1
+        if macrophage.state != 'active':
+            macrophage.intracellular_bacteria += 1
+            # Resting macrophages become infected
+            if macrophage.state == 'resting':
+                macrophage.state = 'infected'
+            # Infected macrophages become chronically infected if they breach threshold
+            elif macrophage.state == 'infected' and macrophage.intracellular_bacteria == \
+                automaton.model_parameters['bacteria_to_turn_chronically_infected']:
+                macrophage.state = 'chronically_infected'
+
 
 
 
