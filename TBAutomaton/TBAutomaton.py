@@ -102,7 +102,8 @@ class TBAutomaton(Automaton):
         Output to console at each timestep
         :return:
         """
-        print "t = ", self.time * self.time_step, "Bac = ", len(self.bacteria)
+        print "t =", self.time * self.time_step, "- Bac =", len(self.bacteria), "- Mac =", len(self.macrophages), \
+            "- T-cell =", len(self.t_cells), "- Cas =", len(self.caseum_addresses)
 
     # OVERRIDE
     def record_counts(self):
