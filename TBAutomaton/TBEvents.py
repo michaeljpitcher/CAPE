@@ -82,7 +82,7 @@ class ChemoKillMacrophage(Event):
         macrophage = automaton.grid[self.macrophage_address]['contents']
         automaton.macrophages.remove(macrophage)
         caseum = Caseum(self.macrophage_address)
-        automaton.caseum.append(caseum)
+        automaton.caseum_addresses.append(self.macrophage_address)
         automaton.grid[self.macrophage_address]['contents'] = caseum
 
 
