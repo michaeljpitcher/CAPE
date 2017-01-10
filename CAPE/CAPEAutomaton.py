@@ -273,20 +273,23 @@ class Automaton:
 
         while len(self.potential_events) > 0:
             event = self.potential_events.pop()
+            print event.priority
+            acceptable = True
 
             for address in event.dependent_addresses:
                 if address in processed_addresses:
                     # Discard event as conflicts with a previous event
-                    continue
+                    acceptable = False
+                    break
 
-            amended_impacted_addresses = []
-            for address in event.impacted_addresses:
-                if address not in processed_addresses:
-                    amended_impacted_addresses.append(address)
-                    processed_addresses.append(address)
-            event.impacted_addresses = amended_impacted_addresses
-
-            acceptable_events.append(event)
+            if acceptable:
+                amended_impacted_addresses = []
+                for address in event.impacted_addresses:
+                    if address not in processed_addresses:
+                        amended_impacted_addresses.append(address)
+                        processed_addresses.append(address)
+                event.impacted_addresses = amended_impacted_addresses
+                acceptable_events.append(event)
 
         return acceptable_events
 
