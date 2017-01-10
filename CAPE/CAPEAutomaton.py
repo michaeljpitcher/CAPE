@@ -139,8 +139,8 @@ class Automaton:
             self.potential_events += new_events
 
             self.acceptable_events = self.conflict_resolve_events()
-            #
-            # self.perform_events()
+
+            self.perform_events()
 
             # Set the main grid
             self.grid = self.work_grid.copy()
