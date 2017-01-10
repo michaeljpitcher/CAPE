@@ -68,7 +68,9 @@ class ChemoKillBacterium(Event):
         self.bacterium_address = bac_address
 
     def perform_event(self, automaton):
-        pass
+        bacterium = automaton.grid[self.bacterium_address]['contents']
+        automaton.bacteria.remove(bacterium)
+        automaton.grid[self.bacterium_address]['contents'] = 0.0
 
 
 class ChemoKillMacrophage(Event):
