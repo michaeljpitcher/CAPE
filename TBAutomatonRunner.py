@@ -1,9 +1,13 @@
 from TBAutomaton.TBAutomaton import *
 import cProfile
+import numpy as np
 
-# ---------------------------------------- Runner -------------------------------------------------------
+import ConfigParser
+import os
+import time
 
-def initialise(config, total_shape):
+
+def initialise():
     """
     Convert the defined lists/settings into a series of coordinates for initialisation of the automaton
     :param config:
@@ -101,59 +105,52 @@ def initialise(config, total_shape):
 
     return blood_vessel_addresses, fast_addresses, slow_addresses, macrophage_addresses
 
+print '------------------------'
+print 'TB Simulation Automaton'
+print '------------------------'
+whole_start_time = time.time()
+print "Begin:   {", whole_start_time, "}"
 
-if __name__ == '__main__':
+config = ConfigParser.RawConfigParser()
+if not config.read('config.properties'):
+    raise IOError("Config file (config.properties) not found")
 
-    import ConfigParser
-    import os
-    import time
+# LOAD PARAMETERS
+parameters = {}
+# Get all options in parameters section and add to the dictionary
+for i in config.options("ModelParametersSection"):
+    parameters[i] = config.getfloat("ModelParametersSection", i)
 
-    print '------------------------'
-    print 'TB Simulation Automaton'
-    print '------------------------'
-    whole_start_time = time.time()
-    print "Begin:   {", whole_start_time, "}"
+# TIME PARAMETERS
+time_parameters = {}
+# Get all options in time parameters section
+for i in config.options("TimeParametersSection"):
+    time_parameters[i] = config.getfloat("TimeParametersSection", i)
 
-    config = ConfigParser.RawConfigParser()
-    if not config.read('config.properties'):
-        raise IOError("Config file (config.properties) not found")
+# LOAD GRID ATTRIBUTES
+total_shape = [int(a) for a in config.get("GridSection", "total_shape").split(",")]
 
-    # LOAD PARAMETERS
-    parameters = {}
-    # Get all options in parameters section and add to the dictionary
-    for i in config.options("ModelParametersSection"):
-        parameters[i] = config.getfloat("ModelParametersSection", i)
+# LOAD RUN PARAMETERS
+output_location = config.get("RunParametersSection", "output_location")
+if not os.path.exists(output_location):
+    os.makedirs(output_location)
+profile = config.getboolean("RunParametersSection", "profile")
 
-    # TIME PARAMETERS
-    time_parameters = {}
-    # Get all options in time parameters section
-    for i in config.options("TimeParametersSection"):
-        time_parameters[i] = config.getfloat("TimeParametersSection", i)
+# LOAD INITIALISATION
+blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise()
 
-    # LOAD GRID ATTRIBUTES
-    total_shape = [int(a) for a in config.get("GridSection", "total_shape").split(",")]
+automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
+                        blood_vessels, macrophages, fast_bacteria, slow_bacteria)
 
-    # LOAD RUN PARAMETERS
-    output_location = config.get("RunParametersSection", "output_location")
-    if not os.path.exists(output_location):
-        os.makedirs(output_location)
-    profile = config.getboolean("RunParametersSection", "profile")
+if profile:
+    pr = cProfile.Profile()
+    pr.enable()
+    automaton.run()
+    pr.disable()
+    pr.print_stats(sort='cumtime')
+else:
+    automaton.run()
 
-    # LOAD INITIALISATION
-    blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise(config, total_shape)
-
-    automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
-                            blood_vessels, macrophages, fast_bacteria, slow_bacteria)
-
-    if profile:
-        pr = cProfile.Profile()
-        pr.enable()
-        automaton.run()
-        pr.disable()
-        pr.print_stats(sort='cumtime')
-    else:
-        automaton.run()
-
-    whole_end_time = time.time()
-    print "End:     {", whole_end_time, "}"
-    print "Duration: ", whole_end_time - whole_start_time
+whole_end_time = time.time()
+print "End:     {", whole_end_time, "}"
+print "Duration: ", whole_end_time - whole_start_time
