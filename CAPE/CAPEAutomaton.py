@@ -137,8 +137,8 @@ class Automaton:
             #
             # self.perform_events()
 
-            # Swap grids
-            self.grid, self.work_grid = self.work_grid, self.grid
+            # Set the main grid
+            self.grid = self.work_grid.copy()
 
             # Increment time & record if needed
             self.time += 1
