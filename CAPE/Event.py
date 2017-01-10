@@ -13,5 +13,5 @@ class Event:
         self.impacted_addresses = impacted_addresses
         self.priority = priority
 
-    def perform_event(self, work_grid):
+    def perform_event(self, automaton):
         raise NotImplementedError
