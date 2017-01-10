@@ -275,5 +275,18 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertEqual(mac.state, 'chronically_infected')
         self.assertEqual(mac.intracellular_bacteria, orig_int_bac + 1)
 
+    def test_macrophage_activation(self):
+        # Activate
+        mac = self.automaton.grid[(1,8)]['contents']
+        mac_act_event = MacrophageActivation((1,8), 'active')
+        mac_act_event.perform_event(self.automaton)
+        self.assertEqual(mac.state, 'active')
+
+        # Deactivate
+        mac = self.automaton.grid[(2, 8)]['contents']
+        mac_act_event = MacrophageActivation((2, 8), 'resting')
+        mac_act_event.perform_event(self.automaton)
+        self.assertEqual(mac.state, 'resting')
+
 if __name__ == '__main__':
     unittest.main()
