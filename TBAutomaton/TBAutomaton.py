@@ -446,14 +446,13 @@ class TBAutomaton(Automaton):
     # OVERRIDE
     def generate_events_from_agents(self):
         events = []
-        events += self.bacteria_replication()
+        events += self.bacteria_processes()
         events += self.t_cell_recruitment()
         events += self.macrophage_recruitment()
         events += self.chemotherapy_killing_bacteria()
         events += self.chemotherapy_killing_macrophages()
         events += self.t_cell_processes()
         events += self.macrophage_processes()
-        events += self.bacteria_state_changes()
         return events
 
     def oxygen_scale(self, address):
@@ -499,21 +498,50 @@ class TBAutomaton(Automaton):
 
         return [chosen_index, self.chemokine_scale(chosen_index)]
 
-    def bacteria_replication(self):
+    def bacteria_processes(self):
         """
         Bacteria replicate (produce a new bacterium agent) once they reach a certain age.
         :return:
         """
-        replication_events = []
+        bacteria_events = []
         # Loop through every bacteria, check age against a (stochastic) threshold, generate event if age is higher than
         # threshold
         for bacterium in self.bacteria:
             # Increment age
             bacterium.age += self.time_step
-
-            # Skip if the bacterium is resting
+            # If the bacterium is resting, check if it can become non-resting (space available)
             if bacterium.resting:
+                space_found = False
+                for depth in range(1, 4):
+                    # Get neighbours
+                    neighbours = self.moore_neighbours(bacterium.address, depth)
+                    for n in neighbours:
+                        # Is neighbour empty?
+                        neighbour = self.grid[n]
+                        if neighbour is not None and neighbour['blood_vessel'] == 0.0 and neighbour['contents'] == 0.0:
+                            new_event = BacteriumStateChange(bacterium.address, 'resting', False)
+                            bacteria_events.append(new_event)
+                            space_found = True
+                            # Don't check other neighbours
+                            break
+                    # Space found so don't check further depths
+                    if space_found:
+                        break
+                # Skip to next bacterium, resting bacteria can't perform other actions
                 continue
+
+            if self.time > 2 / self.time_step:
+                # Check if state change - different scales based on metabolism
+                if (bacterium.metabolism == 'fast' and self.oxygen_scale(bacterium.address) <=
+                        self.model_parameters['oxygen_scale_for_metabolism_change_to_slow']):
+                    new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'slow')
+                    bacteria_events.append(new_event)
+                    continue
+                if (bacterium.metabolism == 'slow' and self.oxygen_scale(bacterium.address) >
+                        self.model_parameters['oxygen_scale_for_metabolism_change_to_fast']):
+                    new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'fast')
+                    bacteria_events.append(new_event)
+                    continue
 
             if bacterium.metabolism == 'fast':
                 maximum = self.model_parameters['bacteria_replication_fast_upper']
@@ -549,14 +577,15 @@ class TBAutomaton(Automaton):
                 if len(free_neighbours) == 0:
                     # Bacterium will change to resting state (quorum sensing)
                     new_event = BacteriumStateChange(bacterium.address, 'resting', True)
-                    replication_events.append(new_event)
+                    bacteria_events.append(new_event)
                 else:  # Free space found
                     # Pick a free neighbour at random
                     neighbour_address = free_neighbours[np.random.randint(len(free_neighbours))]
                     # Create event and add to list of potential events
                     new_event = BacteriumReplication(bacterium.address, neighbour_address, bacterium.metabolism)
-                    replication_events.append(new_event)
-        return replication_events
+                    bacteria_events.append(new_event)
+
+        return bacteria_events
 
     def t_cell_recruitment(self):
         """
@@ -875,42 +904,3 @@ class TBAutomaton(Automaton):
                 mac_events.append(new_event)
 
         return mac_events
-
-    def bacteria_state_changes(self):
-        """
-        Bacteria switch between metabolism based on oxygen and switch resting true to false based on space
-        :return:
-        """
-        bac_state_events = []
-        # Loop through bacteria
-        for bacterium in self.bacteria:
-            # Metabolism change only happens later in process (after 2 hours)
-            if self.time > 2 / self.time_step:
-                # Check if state change - different scales based on metabolism
-                if bacterium.metabolism == 'fast' and self.oxygen_scale(bacterium.address) <= \
-                        self.model_parameters['oxygen_scale_for_metabolism_change_to_slow']:
-                    new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'slow')
-                    bac_state_events.append(new_event)
-                elif bacterium.metabolism == 'slow' and self.oxygen_scale(bacterium.address) > \
-                        self.model_parameters['oxygen_scale_for_metabolism_change_to_fast']:
-                    new_event = BacteriumStateChange(bacterium.address, 'metabolism', 'fast')
-                    bac_state_events.append(new_event)
-            # If bacteria is resting, check if there is now space in neighbourhood, if so, revert to non-resting
-            if bacterium.resting:
-                space_found = False
-                for depth in range(1, 4):
-                    # Get neighbours
-                    neighbours = self.moore_neighbours(bacterium.address, depth)
-                    for n in neighbours:
-                        # Is neighbour empty?
-                        neighbour = self.grid[n]
-                        if neighbour is not None and neighbour['blood_vessel'] == 0.0 and neighbour['contents'] == 0.0:
-                            new_event = BacteriumStateChange(bacterium.address, 'resting', False)
-                            bac_state_events.append(new_event)
-                            space_found = True
-                            # Don't check other neighbours
-                            break
-                    # Space found so don't check further depths
-                    if space_found:
-                        break
-        return bac_state_events
