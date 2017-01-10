@@ -121,6 +121,9 @@ class Automaton:
         self.record()
         while self.time < self.time_limit:
 
+            # Increment time
+            self.time += 1
+
             # Output to console
             self.timestep_output()
             # Run cellular automaton update
@@ -133,15 +136,14 @@ class Automaton:
             new_events = self.generate_events_from_agents()
             self.potential_events += new_events
 
-            # self.conflict_resolve_events()
+            self.conflict_resolve_events()
             #
             # self.perform_events()
 
             # Set the main grid
             self.grid = self.work_grid.copy()
 
-            # Increment time & record if needed
-            self.time += 1
+            # Record if necessary
             self.record()
 
     def record(self):
