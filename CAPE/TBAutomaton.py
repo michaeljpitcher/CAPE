@@ -151,6 +151,11 @@ class TBAutomaton(Automaton):
         to calculate new values (written to work grid)
         :return:
         """
+        # Update the current maxima
+        self.max_oxygen = self.grid['oxygen'].max()
+        self.max_chemotherapy = self.grid['chemotherapy'].max()
+        self.max_chemokine = self.grid['chemokine'].max()
+
         self.diffusion_pre_process()
         chemo = (self.chemo_schedule1_start / self.time_step) <= self.time < \
                 (self.model_parameters['chemotherapy_schedule1_end'] / self.time_step) or \
@@ -203,17 +208,21 @@ class TBAutomaton(Automaton):
         # the original grid with an offset. Results in 5 grids of the same size. Then can apply the diffusion function
         # to all cells at once within that sub-grid
 
-        # Need to check contents. Function returns 1 if bacterium, -1 if non-resting macrophage and 0 otherwise
-        def contents_check(cell):
+        # Need to check contents. Function returns 1 if bacterium, 2 if non-resting macrophage and 0 otherwise
+        def check_contents(cell):
             if isinstance(cell, Bacterium):
                 return 1
             elif (isinstance(cell, Macrophage) and cell.state != 'resting'):
-                return -1
+                return 2
             else:
                 return 0
-        # Return a grid of same shape as regular grid, with value 1, -1 or 0 to indicate presence of bacteria/macrophage
-        vfunction_bac = np.vectorize(contents_check)
-        grid_contents = vfunction_bac(self.grid['contents'])
+        # Run the vectorised function against the main grid
+        vfunction_contents = np.vectorize(check_contents)
+        contents_check_grid = vfunction_contents(self.grid['contents'])
+
+        # Checks values in grid to get grid of 0/1 to indicate presence of bacterium/non-resting macrophage
+        bac_grid = contents_check_grid == 1
+        non_resting_mac_grid = contents_check_grid == 2
 
         # Center grid (of size X-2 x Y-2)
         cell = self.grid[1:-1, 1:-1]
@@ -221,9 +230,9 @@ class TBAutomaton(Automaton):
         below = self.grid[2:, 1:-1]
         left = self.grid[1:-1, :-2]
         right = self.grid[1:-1, 2:]
-        cell_has_bacteria = grid_contents[1:-1, 1:-1]
+        cell_has_bacteria = bac_grid[1:-1, 1:-1]
         # Multiply by -1 to give grid of 0s and 1s for macrophages
-        cell_has_non_resting_macrophage = grid_contents[1:-1, 1:-1] * -1
+        cell_has_non_resting_macrophage = non_resting_mac_grid[1:-1, 1:-1]
 
         # oxygen
         self.work_grid['oxygen'][1:-1,1:-1] = cell['oxygen'] + self.time_step * \
@@ -273,8 +282,8 @@ class TBAutomaton(Automaton):
         below = self.grid[1:2, 1:-1]
         left = self.grid[:1, 0:-2]
         right = self.grid[:1, 2:]
-        cell_has_bacteria = grid_contents[:1, 1:-1]
-        cell_has_non_resting_macrophage = grid_contents[:1, 1:-1] * -1
+        cell_has_bacteria = bac_grid[:1, 1:-1]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[:1, 1:-1] * -1
         work_grid = self.work_grid[:1, 1:-1]
         self.diffusion_3_neighbours(chemo, cell, [left, right], below, cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
@@ -284,41 +293,41 @@ class TBAutomaton(Automaton):
         above = self.grid[0:-2, :1]
         right = self.grid[1:-1, 1:2]
         below = self.grid[2:, :1]
-        cell_has_bacteria = grid_contents[1:-1, :1]
-        cell_has_non_resting_macrophage = grid_contents[1:-1, :1] * -1
+        cell_has_bacteria = bac_grid[1:-1, :1]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[1:-1, :1] * -1
         work_grid = self.work_grid[1:-1, :1]
         self.diffusion_3_neighbours(chemo, cell, [above, below], right, cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
-        
+
         # RIGHT
         cell = self.grid[1:-1, -1:]
         above = self.grid[0:-2, -1:]
         left = self.grid[1:-1, -2:-1]
         below = self.grid[2:, -1:]
-        cell_has_bacteria = grid_contents[1:-1, -1:]
-        cell_has_non_resting_macrophage = grid_contents[1:-1, -1:] * -1
+        cell_has_bacteria = bac_grid[1:-1, -1:]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[1:-1, -1:] * -1
         work_grid = self.work_grid[1:-1, -1:]
         self.diffusion_3_neighbours(chemo, cell, [above, below], left, cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
-        
+
         # BOTTOM ROW
         cell = self.grid[-1:, 1:-1]
         above = self.grid[-2:-1, 1:-1]
         left = self.grid[-1:, 0:-2]
         right = self.grid[-1:, 2:]
-        cell_has_bacteria = grid_contents[-1:, 1:-1]
-        cell_has_non_resting_macrophage = grid_contents[-1:, 1:-1] * -1
+        cell_has_bacteria = bac_grid[-1:, 1:-1]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[-1:, 1:-1] * -1
         work_grid = self.work_grid[-1:, 1:-1]
         self.diffusion_3_neighbours(chemo, cell, [left, right], above, cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
-        
+
         #CORNERS
         # Top left
         cell = self.grid[:1, :1]
         below = self.grid[:1, 1:2]
         right = self.grid[1:2, :1]
-        cell_has_bacteria = grid_contents[:1, :1]
-        cell_has_non_resting_macrophage = grid_contents[:1, :1] * -1
+        cell_has_bacteria = bac_grid[:1, :1]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[:1, :1] * -1
         work_grid = self.work_grid[:1, :1]
         self.diffusion_2_neighbours(chemo, cell, [below, right], cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
@@ -327,8 +336,8 @@ class TBAutomaton(Automaton):
         cell = self.grid[:1, -1:]
         below = self.grid[1:2, -1:]
         left = self.grid[:1, -2:-1]
-        cell_has_bacteria = grid_contents[:1, :1]
-        cell_has_non_resting_macrophage = grid_contents[:1, -1:] * -1
+        cell_has_bacteria = bac_grid[:1, :1]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[:1, -1:] * -1
         work_grid = self.work_grid[:1, -1:]
         self.diffusion_2_neighbours(chemo, cell, [below, left], cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
@@ -337,8 +346,8 @@ class TBAutomaton(Automaton):
         cell = self.grid[-1:, :1]
         above = self.grid[-2:-1, :1]
         right = self.grid[-1:, 1:2]
-        cell_has_bacteria = grid_contents[-1:, :1]
-        cell_has_non_resting_macrophage = grid_contents[-1:, :1] * -1
+        cell_has_bacteria = bac_grid[-1:, :1]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[-1:, :1] * -1
         work_grid = self.work_grid[-1:, :1]
         self.diffusion_2_neighbours(chemo, cell, [above, right], cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
@@ -347,8 +356,8 @@ class TBAutomaton(Automaton):
         cell = self.grid[-1:, -1:]
         above = self.grid[-2:-1, -1:]
         left = self.grid[-1:, -2:-1]
-        cell_has_bacteria = grid_contents[-1:, -1:]
-        cell_has_non_resting_macrophage = grid_contents[-1:, -1:] * -1
+        cell_has_bacteria = bac_grid[-1:, -1:]
+        cell_has_non_resting_macrophage = non_resting_mac_grid[-1:, -1:] * -1
         work_grid = self.work_grid[-1:, -1:]
         self.diffusion_2_neighbours(chemo, cell, [above, left], cell_has_bacteria,
                                     cell_has_non_resting_macrophage, work_grid)
@@ -470,7 +479,7 @@ class TBAutomaton(Automaton):
         :param neighbours:
         :return:
         """
-        max_chemokine = 0
+        max_chemokine = 0.0
         highest_indices = []
         for index in neighbours:
 
@@ -479,6 +488,9 @@ class TBAutomaton(Automaton):
                 highest_indices = [index]
             elif neighbours[index]['chemokine'] == max_chemokine:
                 highest_indices.append(index)
+
+        if len(highest_indices) == 0:
+            print neighbours
 
         # Tie-breaking. If just one pick it, else pick any one index at random
         choice = np.random.randint(0, len(highest_indices))
