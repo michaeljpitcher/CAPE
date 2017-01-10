@@ -92,7 +92,9 @@ class TCellDeath(Event):
         self.t_cell_address = t_cell_address
 
     def perform_event(self, automaton):
-        pass
+        t_cell = automaton.grid[self.t_cell_address]['contents']
+        automaton.t_cells.remove(t_cell)
+        automaton.work_grid[self.t_cell_address]['contents'] = 0.0
 
 
 class TCellMovement(Event):
