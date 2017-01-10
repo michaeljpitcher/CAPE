@@ -124,7 +124,7 @@ class TCellKillsMacrophage(Event):
         automaton.macrophages.remove(macrophage)
         caseum = Caseum(self.macrophage_address)
         automaton.caseum_addresses.append(self.macrophage_address)
-        automaton.work_grid[self.macrophage_address]['conents'] = caseum
+        automaton.work_grid[self.macrophage_address]['contents'] = caseum
 
 
 class MacrophageDeath(Event):
