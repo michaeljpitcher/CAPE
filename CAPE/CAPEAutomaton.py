@@ -293,4 +293,5 @@ class Automaton:
         return acceptable_events
 
     def perform_events(self):
-        raise NotImplementedError
+        for event in self.acceptable_events:
+            event.perform_event(self)
