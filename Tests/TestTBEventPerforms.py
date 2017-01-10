@@ -116,6 +116,12 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertTrue(macrophage in self.automaton.t_cells)
         self.assertEqual(macrophage.state, 'resting')
 
+    def test_chemo_kill_bacterium(self):
+        chem_kill_bac_event = ChemoKillBacterium((8, 1))
+        bac = self.automaton.grid[(8,1)]['contents']
+        chem_kill_bac_event.perform_event(self.automaton)
+        self.assertEqual(self.automaton.work_grid[(8,1)]['contents'], 0.0)
+        self.assertTrue(bac not in self.automaton.bacteria)
 
 if __name__ == '__main__':
     unittest.main()
