@@ -72,6 +72,11 @@ class EventPerformsTestCase(unittest.TestCase):
         self.automaton.grid[(5,5)]['contents'] = tcell
         self.automaton.t_cells.append(tcell)
 
+        # Set macrophage states
+        self.automaton.grid[(2, 8)]['contents'].state = 'active'
+        self.automaton.grid[(3, 8)]['contents'].state = 'infected'
+        self.automaton.grid[(4, 8)]['contents'].state = 'chronically_infected'
+
     def tearDown(self):
         # Close output files and delete
         self.automaton.close_files()
@@ -163,6 +168,27 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertTrue(mac not in self.automaton.macrophages)
         self.assertTrue(t_cell not in self.automaton.t_cells)
 
+    def test_macrophage_death_perform(self):
+        # resting
+        mac = self.automaton.grid[(1, 8)]['contents']
+        mac_death_event = MacrophageDeath((1,8))
+        mac_death_event.perform_event(self.automaton)
+        self.assertEqual(self.automaton.work_grid[(1, 8)]['contents'], 0.0)
+        self.assertTrue(mac not in self.automaton.macrophages)
+        # active
+        mac_death_event = MacrophageDeath((2, 8))
+        mac_death_event.perform_event(self.automaton)
+        self.assertEqual(self.automaton.work_grid[(2, 8)]['contents'], 0.0)
+        # Infected
+        mac_death_event = MacrophageDeath((3, 8))
+        mac_death_event.perform_event(self.automaton)
+        self.assertTrue(isinstance(self.automaton.work_grid[(3, 8)]['contents'], Caseum))
+        self.assertTrue((3,8) in self.automaton.caseum_addresses)
+        # Chr Infected
+        mac_death_event = MacrophageDeath((4, 8))
+        mac_death_event.perform_event(self.automaton)
+        self.assertTrue(isinstance(self.automaton.work_grid[(4, 8)]['contents'], Caseum))
+        self.assertTrue((4, 8) in self.automaton.caseum_addresses)
 
 
 if __name__ == '__main__':
