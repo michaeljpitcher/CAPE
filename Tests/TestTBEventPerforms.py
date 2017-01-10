@@ -87,6 +87,18 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertEqual(old_bac.division_neighbourhood, 'vn')
         self.assertEqual(new_bac.division_neighbourhood, 'mo')
 
+    def test_bacterium_state_change_perform(self):
+
+        bac = self.automaton.grid[(8, 1)]['contents']
+        self.assertEqual(bac.metabolism, 'fast')
+        bac_sta_cha_event = BacteriumStateChange((8, 1), 'metabolism', 'slow')
+        bac_sta_cha_event.perform_event(self.automaton)
+        self.assertEqual(bac.metabolism, 'slow')
+
+        self.assertEqual(bac.resting, False)
+        bac_sta_cha_event = BacteriumStateChange((8, 1), 'resting', True)
+        bac_sta_cha_event.perform_event(self.automaton)
+        self.assertEqual(bac.resting, True)
 
 
 if __name__ == '__main__':
