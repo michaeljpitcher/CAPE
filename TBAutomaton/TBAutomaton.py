@@ -453,7 +453,6 @@ class TBAutomaton(Automaton):
         events += self.chemotherapy_killing_macrophages()
         events += self.t_cell_processes()
         events += self.macrophage_processes()
-        events += self.macrophage_activation()
         events += self.bacteria_state_changes()
         return events
 
