@@ -126,7 +126,7 @@ class EventPerformsTestCase(unittest.TestCase):
         mac_rec_event.perform_event(self.automaton)
         self.assertTrue(isinstance(self.automaton.work_grid[(1, 2)]['contents'], Macrophage))
         macrophage = self.automaton.work_grid[(1, 2)]['contents']
-        self.assertTrue(macrophage in self.automaton.t_cells)
+        self.assertTrue(macrophage in self.automaton.macrophages)
         self.assertEqual(macrophage.state, 'resting')
 
     def test_chemo_kill_bacterium(self):
