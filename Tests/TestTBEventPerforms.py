@@ -190,6 +190,12 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertTrue(isinstance(self.automaton.work_grid[(4, 8)]['contents'], Caseum))
         self.assertTrue((4, 8) in self.automaton.caseum_addresses)
 
+    def test_macrophage_movement(self):
+        mac = self.automaton.grid[(1, 8)]['contents']
+        mac_move_event = MacrophageMovement((1,8), (0,8))
+        mac_move_event.perform_event(self.automaton)
+        self.assertEqual(self.automaton.work_grid[(1,8)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(0,8)]['contents'], mac)
 
 if __name__ == '__main__':
     unittest.main()
