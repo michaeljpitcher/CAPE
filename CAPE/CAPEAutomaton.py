@@ -273,7 +273,6 @@ class Automaton:
 
         while len(self.potential_events) > 0:
             event = self.potential_events.pop()
-            print event.priority
             acceptable = True
 
             for address in event.dependent_addresses:
