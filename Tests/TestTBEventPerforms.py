@@ -143,5 +143,12 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(5,5)]['contents'], 0.0)
         self.assertTrue(t_cell not in self.automaton.t_cells)
 
+    def test_t_cell_move_perform(self):
+        t_cell_move_event = TCellMovement((5,5),(5,4))
+        t_cell = self.automaton.grid[(5,5)]['contents']
+        t_cell_move_event.perform_event(self.automaton)
+        self.assertEqual(self.automaton.work_grid[(5, 5)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(5, 4)]['contents'], t_cell)
+
 if __name__ == '__main__':
     unittest.main()
