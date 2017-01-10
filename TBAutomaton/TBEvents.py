@@ -39,12 +39,15 @@ class BacteriumStateChange(Event):
 
 class RecruitTCell(Event):
     def __init__(self, bv_address, new_t_cell_address):
+        # Vessel in impacted addresses to ensure only 1 thing recruited at a step
         Event.__init__(self, [bv_address, new_t_cell_address], [bv_address, new_t_cell_address])
         self.blood_vessel_address = bv_address
         self.new_t_cell_address = new_t_cell_address
 
     def perform_event(self, automaton):
-        pass
+        new_t_cell = TCell(self.new_t_cell_address)
+        automaton.t_cells.append(new_t_cell)
+        automaton.work_grid[self.new_t_cell_address]['contents'] = new_t_cell
 
 
 class RecruitMacrophage(Event):
