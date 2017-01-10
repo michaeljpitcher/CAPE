@@ -136,7 +136,7 @@ class Automaton:
             new_events = self.generate_events_from_agents()
             self.potential_events += new_events
 
-            self.conflict_resolve_events()
+            self.acceptable_events = self.conflict_resolve_events()
             #
             # self.perform_events()
 
@@ -258,7 +258,34 @@ class Automaton:
         raise NotImplementedError
 
     def conflict_resolve_events(self):
-        raise NotImplementedError
+        """
+        Picks potential events in random order. Evaluates acceptability based on dependent addresses - if any dependent
+        address for an event has already been processed, event is discarded.
+        Can be overridden if a different resolution method is required (e.g. using a priority system)
+        :return:
+        """
+        processed_addresses = []
+        acceptable_events = []
+
+        np.random.shuffle(self.potential_events)
+
+        while len(self.potential_events) > 0:
+            event = self.potential_events.pop()
+
+            for address in event.dependent_addresses:
+                if address in processed_addresses:
+                    continue
+
+            amended_impacted_addresses = []
+            for address in event.impacted_addresses:
+                if address not in processed_addresses:
+                    amended_impacted_addresses.append(address)
+                    processed_addresses.append(address)
+            event.impacted_addresses = amended_impacted_addresses
+
+            acceptable_events.append(event)
+
+        return acceptable_events
 
     def perform_events(self):
         raise NotImplementedError
@@ -281,6 +308,9 @@ class Agent:
 
 
 class Event:
-    def __init__(self):
-        pass
+    def __init__(self, dependent_addresses, impacted_addresses, priority=1):
+        # Addresses which this event has a dependency on - changes to these addresses impacts whether the event happens
+        self.dependent_addresses = dependent_addresses
+        # Addresses which this event affects - their values will be amended in some way if this event happens
+        self.impacted_addresses = impacted_addresses
 

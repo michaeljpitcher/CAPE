@@ -95,24 +95,7 @@ class TBAutomaton(Automaton):
         self.chemo_schedule1_start = np.random.randint(self.model_parameters['chemotherapy_schedule1_start_lower'],
                                                        self.model_parameters['chemotherapy_schedule1_start_upper'])
 
-    def oxygen_scale(self, address):
-        if self.max_oxygen == 0.0:
-            return 0.0
-        else:
-            return self.grid[address]['oxygen'] / self.max_oxygen
-
-    def chemotherapy_scale(self, address):
-        if self.max_chemotherapy == 0.0:
-            return 0.0
-        else:
-            return self.grid[address]['chemotherapy'] / self.max_chemotherapy
-        
-    def chemokine_scale(self, address):
-        if self.max_chemokine == 0.0:
-            return 0.0
-        else:
-            return self.grid[address]['chemokine'] / self.max_chemokine
-
+    # OVERRIDE
     def timestep_output(self):
         """
         Output to console at each timestep
@@ -120,6 +103,7 @@ class TBAutomaton(Automaton):
         """
         print "t = ", self.time * self.time_step, "Bac = ", len(self.bacteria)
 
+    # OVERRIDE
     def record_counts(self):
         # Count up the totals of each bacteria, macrophage, etc and write the to the file
         writer = csv.writer(self.count_file, delimiter=',')
@@ -145,6 +129,7 @@ class TBAutomaton(Automaton):
 
         writer.writerow(row)
 
+    # OVERRIDE
     def update_cells(self):
         """
         Run the cellular automaton update. Runs pre-process first to determine diffusion rates. Then runs diffusion
@@ -457,6 +442,7 @@ class TBAutomaton(Automaton):
             self.model_parameters['chemokine_decay'] * cell['chemokine']
         )
 
+    # OVERRIDE
     def generate_events_from_agents(self):
         events = []
         events += self.bacteria_replication()
@@ -469,6 +455,24 @@ class TBAutomaton(Automaton):
         events += self.macrophage_state_changes()
         events += self.bacteria_state_changes()
         return events
+
+    def oxygen_scale(self, address):
+        if self.max_oxygen == 0.0:
+            return 0.0
+        else:
+            return self.grid[address]['oxygen'] / self.max_oxygen
+
+    def chemotherapy_scale(self, address):
+        if self.max_chemotherapy == 0.0:
+            return 0.0
+        else:
+            return self.grid[address]['chemotherapy'] / self.max_chemotherapy
+
+    def chemokine_scale(self, address):
+        if self.max_chemokine == 0.0:
+            return 0.0
+        else:
+            return self.grid[address]['chemokine'] / self.max_chemokine
 
     def total_bacteria(self):
         return len(self.bacteria) + sum([m.intracellular_bacteria for m in self.macrophages])
@@ -931,6 +935,9 @@ class TBAutomaton(Automaton):
         return bac_state_events
 
 
+
+
+
 # ---------------------------------------- Agents -------------------------------------------------------
 
 
@@ -991,7 +998,7 @@ class Macrophage(Agent):
 
 class BacteriumReplication(Event):
     def __init__(self, original_bac_address, new_bac_address, new_metabolism):
-        Event.__init__(self)
+        Event.__init__(self, [original_bac_address, new_bac_address], [new_bac_address])
         self.original_bac_address = original_bac_address
         self.new_bac_address = new_bac_address
         self.new_metabolism = new_metabolism
@@ -999,7 +1006,7 @@ class BacteriumReplication(Event):
 
 class BacteriumStateChange(Event):
     def __init__(self, address, attribute, value):
-        Event.__init__(self)
+        Event.__init__(self, [address], [])
         self.bacterium_address = address
         self.attribute = attribute
         self.value = value
@@ -1007,80 +1014,83 @@ class BacteriumStateChange(Event):
 
 class RecruitTCell(Event):
     def __init__(self, bv_address, new_t_cell_address):
-        Event.__init__(self)
+        Event.__init__(self, [bv_address, new_t_cell_address], [bv_address, new_t_cell_address])
         self.blood_vessel_address = bv_address
         self.new_t_cell_address = new_t_cell_address
 
 
 class RecruitMacrophage(Event):
     def __init__(self, bv_address, new_macrophage_address):
-        Event.__init__(self)
+        Event.__init__(self, [bv_address, new_macrophage_address], [bv_address, new_macrophage_address])
         self.blood_vessel_address = bv_address
         self.new_macrophage_address = new_macrophage_address
 
 
 class ChemoKillBacterium(Event):
     def __init__(self, bac_address):
-        Event.__init__(self)
+        Event.__init__(self, [bac_address], [bac_address])
         self.bacterium_address = bac_address
 
 
 class ChemoKillMacrophage(Event):
     def __init__(self, mac_address):
-        Event.__init__(self)
+        Event.__init__(self, [mac_address], [mac_address])
         self.macrophage_address = mac_address
 
 
 class TCellDeath(Event):
     def __init__(self, t_cell_address):
-        Event.__init__(self)
+        Event.__init__(self, [t_cell_address], [t_cell_address])
         self.t_cell_address = t_cell_address
 
 
 class TCellMovement(Event):
     def __init__(self, tcell_from_address, tcell_to_address):
-        Event.__init__(self)
+        Event.__init__(self, [tcell_from_address, tcell_to_address], [tcell_from_address, tcell_to_address])
         self.tcell_from_address = tcell_from_address
         self.tcell_to_address = tcell_to_address
 
 
 class TCellKillsMacrophage(Event):
     def __init__(self, tcell_address, macrophage_address):
-        Event.__init__(self)
+        Event.__init__(self, [tcell_address, macrophage_address], [tcell_address, macrophage_address])
         self.tcell_address = tcell_address
         self.macrophage_address = macrophage_address
 
 
 class MacrophageDeath(Event):
     def __init__(self, macrophage_address):
-        Event.__init__(self)
+        Event.__init__(self, [macrophage_address], [macrophage_address])
         self.macrophage_address = macrophage_address
 
 
 class MacrophageMovement(Event):
     def __init__(self, macrophage_from_address, macrophage_to_address):
-        Event.__init__(self)
+        Event.__init__(self, [macrophage_from_address, macrophage_to_address],
+                       [macrophage_from_address, macrophage_to_address])
         self.macrophage_from_address = macrophage_from_address
         self.macrophage_to_address = macrophage_to_address
 
 
 class MacrophageIngestsBacterium(Event):
     def __init__(self, macrophage_address, bacterium_address):
-        Event.__init__(self)
+        Event.__init__(self, [macrophage_address, bacterium_address], [macrophage_address, bacterium_address])
         self.macrophage_address = macrophage_address
         self.bacterium_address = bacterium_address
 
 
 class MacrophageChangesState(Event):
     def __init__(self, mac_address, state):
-        Event.__init__(self)
+        Event.__init__(self, [mac_address], [mac_address])
         self.macrophage_address = mac_address
         self.new_state = state
 
 
 class MacrophageBursts(Event):
     def __init__(self, mac_address, new_bacteria_addresses):
-        Event.__init__(self)
+        # Bacteria addresses are impacted, but they're not dependent (if something else moves into a cell where a
+        # bacterium would be deposited, this doesn't stop the macrophage bursting)
+        Event.__init__(self, [mac_address], [mac_address] + new_bacteria_addresses)
         self.macrophage_address = mac_address
         self.new_bacteria_addresses = new_bacteria_addresses
 
