@@ -217,6 +217,50 @@ class AutomatonTestCase(unittest.TestCase):
                         self.assertEqual(float(row[col_index]), grid_at_step_2[(row_index-10, col_index)]['b'])
                 row_index += 1
 
+    def test_confilct_resolve_events_no_conflicts(self):
+
+        e1 = Event([(0, 0)], [(0, 0)])
+        e2 = Event([(1, 1)], [(1, 1)])
+        e3 = Event([(2, 2)], [(2, 2)])
+
+        self.automaton.potential_events = [e1,e2,e3]
+        acc_events = self.automaton.conflict_resolve_events()
+
+        self.assertEqual(len(acc_events), 3)
+        self.assertItemsEqual(acc_events, [e1,e2,e3])
+
+    def test_confilct_resolve_events_basic_conflict(self):
+
+        e1 = Event([(0, 0)], [(0, 0)], 1)
+        e2 = Event([(0, 0)], [(0, 0)], 2)
+
+        np.random.seed(101)
+
+        self.automaton.potential_events = [e1, e2]
+        acc_events = self.automaton.conflict_resolve_events()
+
+        self.assertEqual(len(acc_events), 1)
+        self.assertItemsEqual(acc_events, [e2])
+
+    def test_conflict_resolve_events_impacted_addresses(self):
+
+        e1 = Event([(0, 0)], [(1, 1), (2, 2)], 1)
+        e2 = Event([(1, 1)], [(1, 1)], 2)
+        self.automaton.potential_events = [e1, e2]
+        np.random.seed(101)  # Pick e2 first - can do both
+        acc_events = self.automaton.conflict_resolve_events()
+        self.assertEqual(len(acc_events), 2)
+        self.assertItemsEqual(acc_events, [e1, e2])
+        # e1 loses it's impacted address
+        self.assertItemsEqual(e1.impacted_addresses, [(2,2)])
+
+        e1 = Event([(0, 0)], [(1, 1)], 1)
+        e2 = Event([(1, 1)], [(1, 1)], 2)
+        self.automaton.potential_events = [e1, e2]
+        np.random.seed(100) # Pick e1 first - cannot do e2
+        acc_events = self.automaton.conflict_resolve_events()
+        self.assertEqual(len(acc_events), 1)
+        self.assertItemsEqual(acc_events, [e1])
 
 
 if __name__ == '__main__':
