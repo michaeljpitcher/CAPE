@@ -201,5 +201,14 @@ class MacrophageBursts(Event):
         self.new_bacteria_addresses = new_bacteria_addresses
 
     def perform_event(self, automaton):
-        pass
+        macrophage = automaton.grid[self.macrophage_address]['contents']
+        automaton.macrophages.remove(macrophage)
+
+        for address in self.new_bacteria_addresses:
+            # Check if the event is still in the impacted addresses (will have been removed if something else has
+            # affected it)
+            if address in self.impacted_addresses:
+                bac = Bacterium(address, 'slow')
+                automaton.bacteria.append(bac)
+                automaton.work_grid[address]['contents'] = bac
 
