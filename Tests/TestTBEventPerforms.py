@@ -288,5 +288,27 @@ class EventPerformsTestCase(unittest.TestCase):
         mac_act_event.perform_event(self.automaton)
         self.assertEqual(mac.state, 'resting')
 
+    def test_macrophage_bursting(self):
+        mac = self.automaton.grid[(4,8)]['contents']
+        mac_burst_event = MacrophageBursts((4,8), [(3,7), (3,9), (4,7), (4,9), (5,7), (5,8), (5,9)])
+
+        # Remove an address from impacted - something else has happened here
+        mac_burst_event.impacted_addresses.remove((4,9))
+
+        mac_burst_event.perform_event(self.automaton)
+
+        self.assertTrue(mac not in self.automaton.macrophages)
+        self.assertTrue(isinstance(self.automaton.work_grid[(4,8)]['contents'], Caseum))
+        self.assertTrue((4,8) in self.automaton.caseum_addresses)
+
+        for address in [(3,7), (3,9), (4,7), (5,7), (5,8), (5,9)]:
+            self.assertTrue(isinstance(self.automaton.work_grid[address]['contents'], Bacterium))
+            bac = self.automaton.work_grid[address]['contents']
+            self.assertTrue(bac in self.automaton.bacteria)
+            self.assertEqual(bac.metabolism, 'slow')
+
+        self.assertEqual(self.automaton.work_grid[(4,9)]['contents'], 0.0)
+
+
 if __name__ == '__main__':
     unittest.main()
