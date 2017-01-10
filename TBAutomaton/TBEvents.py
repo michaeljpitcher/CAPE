@@ -151,7 +151,9 @@ class MacrophageMovement(Event):
         self.macrophage_to_address = macrophage_to_address
 
     def perform_event(self, automaton):
-        pass
+        macrophage = automaton.grid[self.macrophage_from_address]['contents']
+        automaton.work_grid[self.macrophage_from_address]['contents'] = 0.0
+        automaton.work_grid[self.macrophage_to_address]['contents'] = macrophage
 
 
 class MacrophageIngestsBacterium(Event):
