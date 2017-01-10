@@ -67,6 +67,11 @@ class EventPerformsTestCase(unittest.TestCase):
         self.automaton = TBAutomaton(self.shape, self.time_params, self.model_params, self.output_loc,
                                      self.bv, self.macs, self.fb, self.sb)
 
+        # Add a t-cell
+        tcell = TCell((5,5))
+        self.automaton.grid[(5,5)]['contents'] = tcell
+        self.automaton.t_cells.append(tcell)
+
     def tearDown(self):
         # Close output files and delete
         self.automaton.close_files()
@@ -128,9 +133,15 @@ class EventPerformsTestCase(unittest.TestCase):
         mac = self.automaton.grid[(1, 8)]['contents']
         chem_kill_mac_event.perform_event(self.automaton)
         self.assertTrue(isinstance(self.automaton.work_grid[(1, 8)]['contents'], Caseum))
-        caseum = self.automaton.work_grid[(1, 8)]['contents']
         self.assertTrue((1, 8) in self.automaton.caseum_addresses)
         self.assertTrue(mac not in self.automaton.bacteria)
+
+    def test_t_cell_death_perform(self):
+        t_cell_dea_event = TCellDeath((5,5))
+        t_cell = self.automaton.grid[(5,5)]['contents']
+        t_cell_dea_event.perform_event(self.automaton)
+        self.assertEqual(self.automaton.work_grid[(5,5)]['contents'], 0.0)
+        self.assertTrue(t_cell not in self.automaton.t_cells)
 
 if __name__ == '__main__':
     unittest.main()
