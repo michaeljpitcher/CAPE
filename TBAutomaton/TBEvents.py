@@ -57,7 +57,9 @@ class RecruitMacrophage(Event):
         self.new_macrophage_address = new_macrophage_address
 
     def perform_event(self, automaton):
-        pass
+        new_macrophage = Macrophage(self.new_macrophage_address, 'resting')
+        automaton.t_cells.append(new_macrophage)
+        automaton.work_grid[self.new_macrophage_address]['contents'] = new_macrophage
 
 
 class ChemoKillBacterium(Event):
