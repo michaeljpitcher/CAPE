@@ -29,7 +29,7 @@ class AutomatonTestCase(unittest.TestCase):
         self.initialise['c'] = {}
         self.initialise['c'][(3, 3)] = dict()
         self.initialise['c'][(3, 3)]['test'] = 99
-        self.initialise['c'][(4, 4)] = Agent()
+        self.initialise['c'][(4, 4)] = Agent([])
         self.output_loc = 'test_output'
         self.record_values = ['col_1', 'col_2', 'col_3']
         self.grid_records = ['a', 'b']
@@ -89,7 +89,7 @@ class AutomatonTestCase(unittest.TestCase):
                          record_values, record_grids, initialisation)
 
             def generate_events_from_agents(self):
-                pass
+                return []
 
             def update_cells(self):
                 pass
