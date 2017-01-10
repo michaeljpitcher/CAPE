@@ -123,5 +123,14 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(8,1)]['contents'], 0.0)
         self.assertTrue(bac not in self.automaton.bacteria)
 
+    def test_chemo_kill_mac(self):
+        chem_kill_mac_event = ChemoKillMacrophage((1, 8))
+        mac = self.automaton.grid[(1, 8)]['contents']
+        chem_kill_mac_event.perform_event(self.automaton)
+        self.assertTrue(isinstance(self.automaton.work_grid[(1, 8)]['contents'], Caseum))
+        caseum = self.automaton.work_grid[(1, 8)]['contents']
+        self.assertTrue((1, 8) in self.automaton.caseum_addresses)
+        self.assertTrue(mac not in self.automaton.bacteria)
+
 if __name__ == '__main__':
     unittest.main()
