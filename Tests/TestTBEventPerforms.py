@@ -150,5 +150,20 @@ class EventPerformsTestCase(unittest.TestCase):
         self.assertEqual(self.automaton.work_grid[(5, 5)]['contents'], 0.0)
         self.assertEqual(self.automaton.work_grid[(5, 4)]['contents'], t_cell)
 
+    def test_t_cell_kill_macrophage(self):
+        mac = Macrophage((5, 4), 'infected')
+        self.automaton.macrophages.append(mac)
+        self.automaton.grid[(5, 4)]['contents'] = mac
+        t_cell = self.automaton.grid[(5, 5)]['contents']
+        tcell_kill_mac_event = TCellKillsMacrophage((5, 5), (5, 4))
+        tcell_kill_mac_event.perform_event(self.automaton)
+        self.assertTrue(isinstance(self.automaton.work_grid[(5,4)]['contents'], Caseum))
+        self.assertTrue((5,4) in self.automaton.caseum_addresses)
+        self.assertEqual(self.automaton.work_grid[(5,5)]['contents'], 0.0)
+        self.assertTrue(mac not in self.automaton.macrophages)
+        self.assertTrue(t_cell not in self.automaton.t_cells)
+
+
+
 if __name__ == '__main__':
     unittest.main()
