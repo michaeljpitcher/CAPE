@@ -453,7 +453,7 @@ class TBAutomaton(Automaton):
         events += self.chemotherapy_killing_macrophages()
         events += self.t_cell_processes()
         events += self.macrophage_processes()
-        events += self.macrophage_state_changes()
+        events += self.macrophage_activation()
         events += self.bacteria_state_changes()
         return events
 
@@ -720,8 +720,11 @@ class TBAutomaton(Automaton):
         # Loop through macrophages
         for macrophage in self.macrophages:
             death = False
+            activate = False
+            deactivate = False
             move = False
             ingest = False
+            burst = False
             # Increment age
             macrophage.age += self.time_step
             # Different events/movement rates/death rates depending on state
@@ -731,8 +734,12 @@ class TBAutomaton(Automaton):
                 random_macrophage_age = np.random.randint(0, self.model_parameters['resting_macrophage_age_limit'])
                 if macrophage.age >= random_macrophage_age:
                     death = True
+                # Activation
+                elif self.chemokine_scale(macrophage.address) > \
+                        self.model_parameters['chemokine_scale_for_macrophage_activation']:
+                    activate = True
                 # Within a set time for movement
-                if (not death) and self.time % self.model_parameters['resting_macrophage_movement_time'] == 0:
+                elif self.time % self.model_parameters['resting_macrophage_movement_time'] == 0:
                     # Chemokine moves on random biased walk. Random move with probability based on parameters, if
                     # highest chemokine scale at neighbours does not exceed threshold, then also random move
                     neighbours = self.moore_neighbours(macrophage.address, 1)
@@ -762,8 +769,12 @@ class TBAutomaton(Automaton):
                 # Active macrophages die after a set time (not stochastic)
                 if macrophage.age > self.model_parameters['active_macrophage_age_limit']:
                     death = True
+                # Deactivation
+                elif self.chemokine_scale(macrophage.address) < \
+                        self.model_parameters['chemokine_scale_for_macrophage_deactivation']:
+                    deactivate = True
                 # Set time for macrophage movement
-                if (not death) and self.time % self.model_parameters['active_macrophage_movement_time'] == 0:
+                elif self.time % self.model_parameters['active_macrophage_movement_time'] == 0:
                     # Active macrophages always move to highest chemokine neighbour
                     neighbours = self.moore_neighbours(macrophage.address, 1)
                     chosen_neighbour_address = self.find_max_chemokine_neighbour(neighbours)[0]
@@ -804,6 +815,10 @@ class TBAutomaton(Automaton):
                 # Stochastic death
                 random_macrophage_age = np.random.randint(0,
                                                     self.model_parameters['chronically_infected_macrophage_age_limit'])
+
+                if macrophage.intracellular_bacteria == self.model_parameters['bacteria_to_burst_macrophage']:
+                    burst = True
+
                 if macrophage.age >= random_macrophage_age:
                     death = True
                 # Movement at set times
@@ -820,8 +835,38 @@ class TBAutomaton(Automaton):
                     elif isinstance(neighbour['contents'], Bacterium):
                         ingest = True
 
-            if death:
+            # Determine which event is happening
+            if burst:
+                # Loop through all neighbours (up to depth 3) and try to find enough empty space to distribute bacteria
+                bacteria_addresses = []
+                for depth in range(1, 4):
+                    neighbours = self.moore_neighbours(macrophage.address, depth).keys()
+                    # Shuffle the neighbours so we don't give priority
+                    np.random.shuffle(neighbours)
+                    for n in neighbours:
+                        # Find empty neighbours
+                        neighbour = self.grid[n]
+                        if neighbour['contents'] == 0.0 and neighbour['blood_vessel'] == 0.0:
+                            bacteria_addresses.append(n)
+                        # Limit reached - break here stops checking other neighbours at this depth, also need to
+                        # stop searching further depths
+                        if len(bacteria_addresses) == self.model_parameters['bacteria_to_burst_macrophage']:
+                            # Break neighbour loop
+                            break
+                    # Limit reached earlier so don't check other depths
+                    if len(bacteria_addresses) == self.model_parameters['bacteria_to_burst_macrophage']:
+                        # Break depth loop
+                        break
+                new_event = MacrophageBursts(macrophage.address, bacteria_addresses)
+                mac_events.append(new_event)
+            elif death:
                 new_event = MacrophageDeath(macrophage.address)
+                mac_events.append(new_event)
+            elif activate:
+                new_event = MacrophageActivation(macrophage.address, 'active')
+                mac_events.append(new_event)
+            elif deactivate:
+                new_event = MacrophageActivation(macrophage.address, 'resting')
                 mac_events.append(new_event)
             elif move:
                 new_event = MacrophageMovement(macrophage.address, chosen_neighbour_address)
@@ -831,67 +876,6 @@ class TBAutomaton(Automaton):
                 mac_events.append(new_event)
 
         return mac_events
-
-    def macrophage_state_changes(self):
-        """
-        Macrophages change state based on chemokine levels and intracellular bacteria
-        :return:
-        """
-        mac_state_change_events = []
-
-        # Loop through macrophages
-        for macrophage in self.macrophages:
-            new_event = None
-
-            # Resting macrophages
-            if macrophage.state == 'resting':
-                # RESTING -> ACTIVE
-                if self.chemokine_scale(macrophage.address) > \
-                        self.model_parameters['chemokine_scale_for_macrophage_activation'] \
-                        and macrophage.intracellular_bacteria == 0:
-                    new_event = MacrophageChangesState(macrophage.address, 'active')
-                # RESTING -> INFECTED
-                elif macrophage.intracellular_bacteria == 1:
-                    new_event = MacrophageChangesState(macrophage.address, 'infected')
-            elif macrophage.state == 'active':
-                # ACTIVE -> RESTING
-                if self.chemokine_scale(macrophage.address) < \
-                        self.model_parameters['chemokine_scale_for_macrophage_deactivation']:
-                    new_event = MacrophageChangesState(macrophage.address, 'resting')
-            elif macrophage.state == 'infected':
-                # INFECTED -> CHRONICALLY INFECTED
-                if macrophage.intracellular_bacteria >= self.model_parameters['bacteria_to_turn_chronically_infected']:
-                    new_event = MacrophageChangesState(macrophage.address, 'chronically_infected')
-            elif macrophage.state == 'chronically_infected':
-                # MACROPHAGE BURSTS
-                if macrophage.intracellular_bacteria == self.model_parameters['bacteria_to_burst_macrophage']:
-                    # Loop through all neighbours (up to depth 3) and try to find enough to distribute bacteria on to
-                    bacteria_addresses = []
-                    for depth in range(1, 4):
-                        neighbours = self.moore_neighbours(macrophage.address, depth).keys()
-                        # Shuffle the neighbours so we don't give priority
-                        np.random.shuffle(neighbours)
-                        for n in neighbours:
-                            # Find empty neighbours
-                            neighbour = self.grid[n]
-                            if neighbour['contents'] == 0.0 and neighbour['blood_vessel'] == 0.0:
-                                bacteria_addresses.append(n)
-                            # Limit reached - break here stops checking other neighbours at this depth, also need to
-                            # stop searching further depths
-                            if len(bacteria_addresses) == self.model_parameters['bacteria_to_burst_macrophage']:
-                                # Break neighbour loop
-                                break
-                        # Limit reached earlier so don't check other depths
-                        if len(bacteria_addresses) == self.model_parameters['bacteria_to_burst_macrophage']:
-                            # Break depth loop
-                            break
-                    # Macrophage bursting event
-                    new_event = MacrophageBursts(macrophage.address, bacteria_addresses)
-
-            if new_event is not None:
-                mac_state_change_events.append(new_event)
-
-        return mac_state_change_events
 
     def bacteria_state_changes(self):
         """

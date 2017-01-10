@@ -166,7 +166,9 @@ class MacrophageIngestsBacterium(Event):
         pass
 
 
-class MacrophageChangesState(Event):
+
+
+class MacrophageActivation(Event):
     def __init__(self, mac_address, state):
         Event.__init__(self, [mac_address], [mac_address])
         self.macrophage_address = mac_address
