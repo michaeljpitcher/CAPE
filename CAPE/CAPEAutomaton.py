@@ -1,3 +1,5 @@
+from Event import *
+from Agent import *
 import numpy as np
 import itertools
 import math
@@ -63,7 +65,7 @@ class Automaton:
             # Make sure all attributes in initialisation are valid
             assert attribute in self.attributes, "Invalid initialisation: key[{0}] is not valid".format(attribute)
             values = initialisation[attribute]
-            # Pset the required values. If it's an agent, add it to the list
+            # Set the required values. If it's an agent, add it to the list
             for address in values:
                 self.grid[address][attribute] = values[address]
                 if isinstance(values[address], Agent):
@@ -274,6 +276,7 @@ class Automaton:
 
             for address in event.dependent_addresses:
                 if address in processed_addresses:
+                    # Discard event as conflicts with a previous event
                     continue
 
             amended_impacted_addresses = []
@@ -289,28 +292,3 @@ class Automaton:
 
     def perform_events(self):
         raise NotImplementedError
-
-
-class Agent:
-    def __init__(self, address):
-        """
-        An Autonomous actor within the system. Abstract - should be subclassed.
-        """
-        self.address = address
-        self.age = 0.0
-
-    def output_code(self):
-        """
-        Code to be output for record grid. Should be overriden by subclass.
-        :return:
-        """
-        raise NotImplementedError
-
-
-class Event:
-    def __init__(self, dependent_addresses, impacted_addresses, priority=1):
-        # Addresses which this event has a dependency on - changes to these addresses impacts whether the event happens
-        self.dependent_addresses = dependent_addresses
-        # Addresses which this event affects - their values will be amended in some way if this event happens
-        self.impacted_addresses = impacted_addresses
-

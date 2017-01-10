@@ -1,7 +1,7 @@
-import unittest
-import os
-from CAPE.TBAutomaton import *
 import shutil
+import unittest
+
+from TBAutomaton.TBAutomaton import *
 
 
 class DiffusionTestCase(unittest.TestCase):

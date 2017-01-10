@@ -1,7 +1,8 @@
-import unittest
-from CAPE.TBAutomaton import *
-import shutil
 import os
+import shutil
+import unittest
+
+from TBAutomaton.TBAutomaton import *
 
 
 class TBAutomatonTestCase(unittest.TestCase):
