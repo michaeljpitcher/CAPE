@@ -100,6 +100,15 @@ class EventPerformsTestCase(unittest.TestCase):
         bac_sta_cha_event.perform_event(self.automaton)
         self.assertEqual(bac.resting, True)
 
+    def test_t_cell_recruitment_perform(self):
+
+        t_cell_rec_event = RecruitTCell((1,1), (1,2))
+        t_cell_rec_event.perform_event(self.automaton)
+
+        self.assertTrue(isinstance(self.automaton.work_grid[(1,2)]['contents'], TCell))
+        tcell = self.automaton.work_grid[(1,2)]['contents']
+        self.assertTrue(tcell in self.automaton.t_cells)
+
 
 if __name__ == '__main__':
     unittest.main()
