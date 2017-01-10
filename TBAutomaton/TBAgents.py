@@ -42,9 +42,9 @@ class Macrophage(Agent):
     def output_code(self):
         code = 4.0
         if self.state == 'active':
-            code += 1.0
+            code = 5.0
         elif self.state == 'infected':
-            code += 2.0
+            code = 6.0
         elif self.state == 'chronically_infected':
-            code += 3.0
+            code = 7.0
         return code
