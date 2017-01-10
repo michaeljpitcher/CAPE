@@ -20,15 +20,21 @@ class BacteriumReplication(Event):
         else:
             original_bacterium.division_neighbourhood = 'mo'
 
+
 class BacteriumStateChange(Event):
     def __init__(self, address, attribute, value):
+        # No impacted addresses - changing state doesn't prevent other events (e.g. being ingested)
         Event.__init__(self, [address], [])
         self.bacterium_address = address
         self.attribute = attribute
         self.value = value
 
     def perform_event(self, automaton):
-        pass
+        bacterium = automaton.grid[self.bacterium_address]
+        if self.attribute == 'metabolism':
+            bacterium.metabolism = self.value
+        elif self.attribute == 'resting':
+            bacterium.resting = self.value
 
 
 class RecruitTCell(Event):
