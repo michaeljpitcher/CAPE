@@ -30,7 +30,7 @@ class BacteriumStateChange(Event):
         self.value = value
 
     def perform_event(self, automaton):
-        bacterium = automaton.grid[self.bacterium_address]
+        bacterium = automaton.grid[self.bacterium_address]['contents']
         if self.attribute == 'metabolism':
             bacterium.metabolism = self.value
         elif self.attribute == 'resting':
