@@ -58,7 +58,7 @@ class RecruitMacrophage(Event):
 
     def perform_event(self, automaton):
         new_macrophage = Macrophage(self.new_macrophage_address, 'resting')
-        automaton.t_cells.append(new_macrophage)
+        automaton.macrophages.append(new_macrophage)
         automaton.work_grid[self.new_macrophage_address]['contents'] = new_macrophage
 
 
