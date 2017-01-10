@@ -134,7 +134,7 @@ class MacrophageDeath(Event):
 
     def perform_event(self, automaton):
         macrophage = automaton.grid[self.macrophage_address]['contents']
-        automaton.macropages.remove(macrophage)
+        automaton.macrophages.remove(macrophage)
         if macrophage.state == 'infected' or macrophage.state == 'chronically_infected':
             caseum = Caseum(self.macrophage_address)
             automaton.caseum_addresses.append(self.macrophage_address)
