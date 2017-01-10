@@ -55,6 +55,7 @@ class EventPerformsTestCase(unittest.TestCase):
         self.model_params['bacteria_to_burst_macrophage'] = 999999
         self.model_params['oxygen_scale_for_metabolism_change_to_slow'] = -1.0
         self.model_params['oxygen_scale_for_metabolism_change_to_fast'] = 101.0
+        self.model_params['bacteria_to_turn_chronically_infected'] = 999
 
         self.bv = [(1,1)]
         self.macs = [(1,8), (2,8), (3,8), (4,8)]
@@ -75,7 +76,9 @@ class EventPerformsTestCase(unittest.TestCase):
         # Set macrophage states
         self.automaton.grid[(2, 8)]['contents'].state = 'active'
         self.automaton.grid[(3, 8)]['contents'].state = 'infected'
+        self.automaton.grid[(3, 8)]['contents'].intracellular_bacteria = 7
         self.automaton.grid[(4, 8)]['contents'].state = 'chronically_infected'
+        self.automaton.grid[(4, 8)]['contents'].intracellular_bacteria = 19
 
     def tearDown(self):
         # Close output files and delete
@@ -196,6 +199,81 @@ class EventPerformsTestCase(unittest.TestCase):
         mac_move_event.perform_event(self.automaton)
         self.assertEqual(self.automaton.work_grid[(1,8)]['contents'], 0.0)
         self.assertEqual(self.automaton.work_grid[(0,8)]['contents'], mac)
+
+    def test_resting_macrophage_ingests_bacterium_perform(self):
+        bac = Bacterium((1,7), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(1,7)]['contents'] = bac
+        mac = self.automaton.grid[(1,8)]['contents']
+        mac_ing_bac_event = MacrophageIngestsBacterium((1,8),(1,7))
+        mac_ing_bac_event.perform_event(self.automaton)
+
+        self.assertTrue(bac not in self.automaton.bacteria)
+        self.assertEqual(self.automaton.work_grid[(1, 8)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(1, 7)]['contents'], mac)
+        self.assertEqual(mac.state, 'infected')
+        self.assertEqual(mac.intracellular_bacteria, 1)
+
+    def test_active_macrophage_ingests_bacterium_perform(self):
+        bac = Bacterium((2,7), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(2,7)]['contents'] = bac
+        mac = self.automaton.grid[(2,8)]['contents']
+        mac_ing_bac_event = MacrophageIngestsBacterium((2,8),(2,7))
+        mac_ing_bac_event.perform_event(self.automaton)
+
+        self.assertTrue(bac not in self.automaton.bacteria)
+        self.assertEqual(self.automaton.work_grid[(2, 8)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(2, 7)]['contents'], mac)
+        self.assertEqual(mac.state, 'active')
+        self.assertEqual(mac.intracellular_bacteria, 0)
+
+    def test_infected_macrophage_ingests_bacterium_perform_no_state_change(self):
+        bac = Bacterium((3,7), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(3,7)]['contents'] = bac
+        mac = self.automaton.grid[(3,8)]['contents']
+        orig_int_bac = mac.intracellular_bacteria
+        mac_ing_bac_event = MacrophageIngestsBacterium((3,8),(3,7))
+        mac_ing_bac_event.perform_event(self.automaton)
+
+        self.assertTrue(bac not in self.automaton.bacteria)
+        self.assertEqual(self.automaton.work_grid[(3, 8)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(3, 7)]['contents'], mac)
+        self.assertEqual(mac.state, 'infected')
+        self.assertEqual(mac.intracellular_bacteria, orig_int_bac + 1)
+
+    def test_infected_macrophage_ingests_bacterium_perform_change_to_chr_inf(self):
+
+        bac = Bacterium((3,7), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(3,7)]['contents'] = bac
+        mac = self.automaton.grid[(3,8)]['contents']
+        orig_int_bac = mac.intracellular_bacteria
+        self.automaton.model_parameters['bacteria_to_turn_chronically_infected'] = orig_int_bac + 1
+        mac_ing_bac_event = MacrophageIngestsBacterium((3,8),(3,7))
+        mac_ing_bac_event.perform_event(self.automaton)
+
+        self.assertTrue(bac not in self.automaton.bacteria)
+        self.assertEqual(self.automaton.work_grid[(3, 8)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(3, 7)]['contents'], mac)
+        self.assertEqual(mac.state, 'chronically_infected')
+        self.assertEqual(mac.intracellular_bacteria, orig_int_bac + 1)
+
+    def test_chr_infected_macrophage_ingests_bacterium_perform(self):
+        bac = Bacterium((4,7), 'fast')
+        self.automaton.bacteria.append(bac)
+        self.automaton.grid[(4,7)]['contents'] = bac
+        mac = self.automaton.grid[(4,8)]['contents']
+        orig_int_bac = mac.intracellular_bacteria
+        mac_ing_bac_event = MacrophageIngestsBacterium((4,8),(4,7))
+        mac_ing_bac_event.perform_event(self.automaton)
+
+        self.assertTrue(bac not in self.automaton.bacteria)
+        self.assertEqual(self.automaton.work_grid[(4, 8)]['contents'], 0.0)
+        self.assertEqual(self.automaton.work_grid[(4, 7)]['contents'], mac)
+        self.assertEqual(mac.state, 'chronically_infected')
+        self.assertEqual(mac.intracellular_bacteria, orig_int_bac + 1)
 
 if __name__ == '__main__':
     unittest.main()
