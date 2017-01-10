@@ -104,10 +104,17 @@ class EventPerformsTestCase(unittest.TestCase):
 
         t_cell_rec_event = RecruitTCell((1,1), (1,2))
         t_cell_rec_event.perform_event(self.automaton)
-
         self.assertTrue(isinstance(self.automaton.work_grid[(1,2)]['contents'], TCell))
         tcell = self.automaton.work_grid[(1,2)]['contents']
         self.assertTrue(tcell in self.automaton.t_cells)
+
+    def test_macrophage_recruitment_perform(self):
+        mac_rec_event = RecruitMacrophage((1, 1), (1, 2))
+        mac_rec_event.perform_event(self.automaton)
+        self.assertTrue(isinstance(self.automaton.work_grid[(1, 2)]['contents'], Macrophage))
+        macrophage = self.automaton.work_grid[(1, 2)]['contents']
+        self.assertTrue(macrophage in self.automaton.t_cells)
+        self.assertEqual(macrophage.state, 'resting')
 
 
 if __name__ == '__main__':
