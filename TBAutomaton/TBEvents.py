@@ -104,7 +104,9 @@ class TCellMovement(Event):
         self.tcell_to_address = tcell_to_address
 
     def perform_event(self, automaton):
-        pass
+        t_cell = automaton.grid[self.tcell_from_address]['contents']
+        automaton.work_grid[self.tcell_from_address]['contents'] = 0.0
+        automaton.work_grid[self.tcell_to_address]['contents'] = t_cell
 
 
 class TCellKillsMacrophage(Event):
