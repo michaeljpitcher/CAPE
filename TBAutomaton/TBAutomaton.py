@@ -160,7 +160,7 @@ class TBAutomaton(Automaton):
         # Loop through every caseum address and record the addresses that are within the required distance
         affected_addresses = []
         for caseum_address in self.caseum_addresses:
-            for d in range(1, self.model_parameters['caseum_distance_to_reduce_diffusion']+1):
+            for d in range(1, int(self.model_parameters['caseum_distance_to_reduce_diffusion'])+1):
                 neighbours = self.moore_neighbours(caseum_address,d)
                 affected_addresses += neighbours
 
