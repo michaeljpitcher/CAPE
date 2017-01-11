@@ -105,6 +105,7 @@ class TCellMovement(Event):
 
     def perform_event(self, automaton):
         t_cell = automaton.grid[self.tcell_from_address]['contents']
+        t_cell.address = self.tcell_to_address
         automaton.work_grid[self.tcell_from_address]['contents'] = 0.0
         automaton.work_grid[self.tcell_to_address]['contents'] = t_cell
 
@@ -152,6 +153,7 @@ class MacrophageMovement(Event):
 
     def perform_event(self, automaton):
         macrophage = automaton.grid[self.macrophage_from_address]['contents']
+        macrophage.address = self.macrophage_to_address
         automaton.work_grid[self.macrophage_from_address]['contents'] = 0.0
         automaton.work_grid[self.macrophage_to_address]['contents'] = macrophage
 
@@ -166,6 +168,7 @@ class MacrophageIngestsBacterium(Event):
         macrophage = automaton.grid[self.macrophage_address]['contents']
         bacterium = automaton.grid[self.bacterium_address]['contents']
 
+        macrophage.address = self.bacterium_address
         automaton.bacteria.remove(bacterium)
         automaton.work_grid[self.macrophage_address]['contents'] = 0.0
         automaton.work_grid[self.bacterium_address]['contents'] = macrophage
