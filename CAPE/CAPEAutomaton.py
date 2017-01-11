@@ -11,7 +11,7 @@ import csv
 class Automaton:
 
     def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location, values_to_record,
-                 attribute_grids_to_record, initialisation):
+                 attribute_grids_to_record, initialisation, numpy_seed = None):
         """
         Hybrid cellular automaton and agent-based model.
         :param shape: Shape of cellular grid (lattice)
@@ -23,7 +23,12 @@ class Automaton:
         :param attribute_grids_to_record: list of attributes that require recording
         :param values_to_record: Column headers for csv file of record counts
         :param initialisation: Dictionary of objects/values to be assigned to attributes at beginning of run
+        :param numpy_seed: Optional seed for remove randomness - if None, random, else numpy is seeded to give same
+               outcome each time
         """
+
+        if numpy_seed is not None:
+            np.random.seed(numpy_seed)
 
         self.attributes = attributes
         self.model_parameters = model_parameters
@@ -57,7 +62,6 @@ class Automaton:
         self.time_limit = time_parameters['time_limit'] / self.time_step
         # Create the grids
         self.grid = np.zeros(shape, dtype={'names':attributes, 'formats':formats})
-        self.work_grid = np.zeros(shape, dtype={'names': attributes, 'formats': formats})
         # List of agents TODO - may be redundant
         self.agents = []
         # Grid initialisation
@@ -70,6 +74,8 @@ class Automaton:
                 self.grid[address][attribute] = values[address]
                 if isinstance(values[address], Agent):
                     self.agents.append(values[address])
+
+        self.work_grid = self.grid.copy()
 
         # NEIGHBOURHOODS
         # Builds dictionaries of neighbour cells for use with neighbour functions

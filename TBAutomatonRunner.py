@@ -135,6 +135,9 @@ output_location = config.get("RunParametersSection", "output_location")
 if not os.path.exists(output_location):
     os.makedirs(output_location)
 profile = config.getboolean("RunParametersSection", "profile")
+numpy_seed = None
+if not config.getboolean("RunParametersSection", "random"):
+    numpy_seed = config.getint("RunParametersSection", "non_random_seed")
 
 # LOAD INITIALISATION
 blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise()
