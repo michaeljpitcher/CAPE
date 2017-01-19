@@ -138,21 +138,19 @@ if not config.getboolean("RunParametersSection", "random"):
 
 number_of_runs = config.getint("RunParametersSection", "number_runs")
 
-output_location = config.get("RunParametersSection", "output_location")
+main_output_location = config.get("RunParametersSection", "output_location")
 # Make the main output folder
-if not os.path.exists(output_location):
-    os.makedirs(output_location)
+if not os.path.exists(main_output_location):
+    os.makedirs(main_output_location)
 
 random = config.getboolean("RunParametersSection", "random")
-
-
 debug = config.getboolean("RunParametersSection", "debug")
 
 # LOAD INITIALISATION
 blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise()
 
 for n in range(number_of_runs):
-    output_location = output_location + "/" + str(n)
+    output_location = main_output_location + "/" + str(n)
     if not os.path.exists(output_location):
         os.makedirs(output_location)
 
