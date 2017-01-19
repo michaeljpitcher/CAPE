@@ -461,19 +461,19 @@ class TBAutomaton(Automaton):
         if self.max_oxygen == 0.0:
             return 0.0
         else:
-            return self.grid[address]['oxygen'] / self.max_oxygen
+            return (self.grid[address]['oxygen'] / self.max_oxygen) * 100.0
 
     def chemotherapy_scale(self, address):
         if self.max_chemotherapy == 0.0:
             return 0.0
         else:
-            return self.grid[address]['chemotherapy'] / self.max_chemotherapy
+            return (self.grid[address]['chemotherapy'] / self.max_chemotherapy) * 100.0
 
     def chemokine_scale(self, address):
         if self.max_chemokine == 0.0:
             return 0.0
         else:
-            return self.grid[address]['chemokine'] / self.max_chemokine
+            return (self.grid[address]['chemokine'] / self.max_chemokine) * 100.0
 
     def total_bacteria(self):
         return len(self.bacteria) + sum([m.intracellular_bacteria for m in self.macrophages])
