@@ -11,7 +11,7 @@ import csv
 class Automaton:
 
     def __init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location, values_to_record,
-                 attribute_grids_to_record, initialisation, numpy_seed = None):
+                 attribute_grids_to_record, initialisation, numpy_seed = None, debug = False):
         """
         Hybrid cellular automaton and agent-based model.
         :param shape: Shape of cellular grid (lattice)
@@ -26,6 +26,10 @@ class Automaton:
         :param numpy_seed: Optional seed for remove randomness - if None, random, else numpy is seeded to give same
                outcome each time
         """
+
+        self.debug = debug
+        if self.debug:
+            self.debug_file = open('debug.txt', 'w')
 
         if numpy_seed is not None:
             np.random.seed(numpy_seed)
@@ -119,6 +123,8 @@ class Automaton:
         for grid_file in self.grid_files.values():
             grid_file.close()
         self.count_file.close()
+        if self.debug:
+            self.debug_file.close()
 
     def run(self):
         """
