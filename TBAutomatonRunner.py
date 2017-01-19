@@ -131,28 +131,37 @@ for i in config.options("TimeParametersSection"):
 total_shape = [int(a) for a in config.get("GridSection", "total_shape").split(",")]
 
 # LOAD RUN PARAMETERS
-output_location = config.get("RunParametersSection", "output_location")
-if not os.path.exists(output_location):
-    os.makedirs(output_location)
 profile = config.getboolean("RunParametersSection", "profile")
 numpy_seed = None
 if not config.getboolean("RunParametersSection", "random"):
     numpy_seed = config.getint("RunParametersSection", "non_random_seed")
 
+number_of_runs = config.getint("RunParametersSection", "number_runs")
+
+output_location = config.get("RunParametersSection", "output_location")
+# Make the main output folder
+if not os.path.exists(output_location):
+    os.makedirs(output_location)
+
 # LOAD INITIALISATION
 blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise()
 
-automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
+for n in range(number_of_runs):
+    output_location = output_location + "/" + str(n)
+    if not os.path.exists(output_location):
+        os.makedirs(output_location)
+
+    automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
                         blood_vessels, macrophages, fast_bacteria, slow_bacteria)
 
-if profile:
-    pr = cProfile.Profile()
-    pr.enable()
-    automaton.run()
-    pr.disable()
-    pr.print_stats(sort='cumtime')
-else:
-    automaton.run()
+    if profile:
+        pr = cProfile.Profile()
+        pr.enable()
+        automaton.run()
+        pr.disable()
+        pr.print_stats(sort='cumtime')
+    else:
+        automaton.run()
 
 whole_end_time = time.time()
 print "End:     {", whole_end_time, "}"
