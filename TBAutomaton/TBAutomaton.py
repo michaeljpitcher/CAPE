@@ -9,7 +9,7 @@ class TBAutomaton(Automaton):
 
     def __init__(self, shape, time_parameters, model_parameters, output_location,
                  blood_vessel_addresses, initial_macrophage_addresses,
-                 initial_fast_bacteria_addresses, initial_slow_bacteria_addresses, numpy_seed = None):
+                 initial_fast_bacteria_addresses, initial_slow_bacteria_addresses, numpy_seed = None, debug = False):
         """
         Specific model of CAPE Automaton to investigate TB infection. Grid is square of alveolar tissue, agents are
         bacteria and immune cells that act upon the tissue. Cellular automaton handles diffusion of oxygen,
@@ -85,7 +85,8 @@ class TBAutomaton(Automaton):
 
         # Super class initialisation
         Automaton.__init__(self, shape, attributes, formats, time_parameters, model_parameters, output_location,
-                           self.values_to_record, self.grids_to_record, initialisation, numpy_seed)
+                           self.values_to_record, self.grids_to_record, initialisation,
+                           numpy_seed=numpy_seed, debug=debug)
 
         # Maxima
         self.max_oxygen = 0.0

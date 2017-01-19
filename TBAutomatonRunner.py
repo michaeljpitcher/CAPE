@@ -143,6 +143,11 @@ output_location = config.get("RunParametersSection", "output_location")
 if not os.path.exists(output_location):
     os.makedirs(output_location)
 
+random = config.getboolean("RunParametersSection", "random")
+
+
+debug = config.getboolean("RunParametersSection", "debug")
+
 # LOAD INITIALISATION
 blood_vessels, fast_bacteria, slow_bacteria, macrophages = initialise()
 
@@ -151,8 +156,13 @@ for n in range(number_of_runs):
     if not os.path.exists(output_location):
         os.makedirs(output_location)
 
-    automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location,
-                        blood_vessels, macrophages, fast_bacteria, slow_bacteria)
+    if random:
+        numpy_seed = config.getint("RunParametersSection", "non_random_seed")
+        automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location, blood_vessels, macrophages,
+                            fast_bacteria, slow_bacteria, numpy_seed=numpy_seed, debug=debug)
+    else:
+        automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location, blood_vessels, macrophages,
+                                fast_bacteria, slow_bacteria, debug=debug)
 
     if profile:
         pr = cProfile.Profile()
