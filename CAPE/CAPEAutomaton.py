@@ -29,7 +29,7 @@ class Automaton:
 
         self.debug = debug
         if self.debug:
-            self.debug_file = open('debug.txt', 'w')
+            self.debug_file = open(output_location + '/debug.txt', 'w')
 
         if numpy_seed is not None:
             np.random.seed(numpy_seed)
