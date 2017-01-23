@@ -13,7 +13,7 @@ class Bacterium(Agent):
         code = 1.0 + (self.metabolism == 'slow')
         # Add .5 if resting
         if self.resting:
-            code += 0.5
+            code += 0.25
         return code
 
 
