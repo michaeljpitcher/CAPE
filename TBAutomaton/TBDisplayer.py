@@ -5,7 +5,7 @@ import matplotlib.animation as animation
 from matplotlib import gridspec
 
 
-def create_movie(output_directory, grid_shape, movie_name, interval=400, legend=False, display=True):
+def create_movie(output_directory, grid_shape, movie_name, interval=400, legend=False, display=False):
     print "Collecting data..."
     contents_file = open(output_directory + "/contents.csv")
     spamreader = csv.reader(contents_file, delimiter=',')
@@ -140,4 +140,4 @@ def create_movie(output_directory, grid_shape, movie_name, interval=400, legend=
         plt.show()
 
 if __name__ == '__main__':
-    create_movie("output/0", (101,101), "TB")
+    create_movie("../../../../Comparison/DATA/IV1/MINE2/3", (101,101), "TB")
