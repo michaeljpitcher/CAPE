@@ -154,7 +154,7 @@ for n in range(number_of_runs):
     if not os.path.exists(output_location):
         os.makedirs(output_location)
 
-    if random:
+    if not random:
         numpy_seed = config.getint("RunParametersSection", "non_random_seed")
         automaton = TBAutomaton(total_shape, time_parameters, parameters, output_location, blood_vessels, macrophages,
                             fast_bacteria, slow_bacteria, numpy_seed=numpy_seed, debug=debug)
