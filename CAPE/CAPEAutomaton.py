@@ -245,24 +245,18 @@ class Automaton:
         Write the contents of the grid to the output file (based on specified agent codes)
         :return:
         """
-        writers= {}
-        for a in self.grid_files:
-            writers[a] = csv.writer(self.grid_files[a], delimiter=',')
-        # Loop through every cell
-        for i in range(self.grid.shape[0]):
-            rows = {}
-            for a in writers:
-                rows[a] = []
-            for j in range(self.grid.shape[1]):
-                # Write the value (or code if it's an agent)
-                for a in writers:
-                    value = self.grid[(i,j)][a]
-                    if isinstance(value, Agent):
-                        rows[a].append(value.output_code())
+        for attribute in self.grid_files:
+            writer = csv.writer(self.grid_files[attribute], delimiter=',')
+            grid = self.grid[attribute]
+            for row_index in range(grid.shape[0]):
+                row = grid[row_index]
+                output_row = []
+                for cell in row:
+                    if isinstance(cell, Agent):
+                        output_row.append(cell.output_code())
                     else:
-                        rows[a].append(value)
-            for a in writers:
-                writers[a].writerow(rows[a])
+                        output_row.append(cell)
+                writer.writerow(output_row)
 
     def record_counts(self):
         """
