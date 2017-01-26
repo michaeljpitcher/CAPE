@@ -196,21 +196,16 @@ class TBAutomaton(Automaton):
         # the original grid with an offset. Results in 5 grids of the same size. Then can apply the diffusion function
         # to all cells at once within that sub-grid
 
-        # Need to check contents. Function returns 1 if bacterium, 2 if non-resting macrophage and 0 otherwise
-        def check_contents(cell):
-            if isinstance(cell, Bacterium):
-                return 1
-            elif (isinstance(cell, Macrophage) and cell.state != 'resting'):
-                return 2
-            else:
-                return 0
-        # Run the vectorised function against the main grid
-        vfunction_contents = np.vectorize(check_contents)
-        contents_check_grid = vfunction_contents(self.grid['contents'])
-
-        # Checks values in grid to get grid of 0/1 to indicate presence of bacterium/non-resting macrophage
-        bac_grid = contents_check_grid == 1
-        non_resting_mac_grid = contents_check_grid == 2
+        # Grids to indicate presence of bacteria / non-resting macrophage
+        # Take an initial grid of zeros of same shape as main grid, change address which have bacteria to 1
+        bac_grid = np.zeros(self.grid.shape)
+        for b in self.bacteria:
+            bac_grid[b.address] = 1
+        # Take an initial grid of zeros of same shape as main grid, change address which have non-resting mac to 1
+        non_resting_mac_grid = np.zeros(self.grid.shape)
+        for m in self.macrophages:
+            if m.state != 'resting':
+                non_resting_mac_grid[m.address] = 1
 
         # Center grid (of size X-2 x Y-2)
         cell = self.grid[1:-1, 1:-1]
